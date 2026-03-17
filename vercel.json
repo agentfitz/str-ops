@@ -14,7 +14,7 @@
     {
       "source": "/",
       "has": [{ "type": "host", "value": "ops.bmf.llc" }],
-      "destination": "/dashboard"
+      "destination": "/index"
     },
     {
       "source": "/(.*)",

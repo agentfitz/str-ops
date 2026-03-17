@@ -6,7 +6,7 @@ import fs from 'fs'
 import { parse } from 'csv-parse/sync'
 import { supabase } from '../../lib/supabase.js'
 import { propertyIdFromIgms } from '../../lib/propertyMap.js'
-import { classifyStay } from '../../api/services/classifier.js'
+import { classifyStay } from '../../lib/services/classifier.js'
 
 const filePath = process.argv[2]
 if (!filePath) {

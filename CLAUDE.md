@@ -62,7 +62,7 @@ Also note: the `owners` seed data in `schema.sql` may still reference "Brian Sr.
 
 ## Design System
 - **Fonts**: Playfair Display (headings/serif), DM Sans (body), IBM Plex Mono (numbers/data/labels)
-- **Colors**: `#F9F6F0` bg (warm off-white), `#1C1917` ink, `#2C5F4A` accent green, `#F7F5F0` card bg
+- **Colors**: `#F7F5F0` bg (warm off-white), `#1A1A1A` ink, `#1D4A35` accent green, `#FFFFFF` surface/card bg
 - **Property chart colors**: Hidden Hollow `#4A90A4`, Village Lane `#9B7EC8`, Lee Ct `#E8A838`, Walker `#5FAD78`
 - **Metric cards**: 5-column pastel grid using nth-child colors (sage/periwinkle/sand/lavender/sky)
 - **Aesthetic**: Editorial/utilitarian — Bloomberg Terminal meets Field Notes. No generic AI aesthetics, no Inter/Roboto, no purple gradients.
