@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "node server.js",
+    "deploy": "vercel --prod",
     "import:igms": "node scripts/importers/igms.js",
     "import:baselane": "node scripts/importers/baselane.js"
   },
