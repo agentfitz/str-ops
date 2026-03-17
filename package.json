@@ -1,0 +1,20 @@
+{
+  "name": "str-ops",
+  "version": "0.1.0",
+  "description": "STR operations dashboard — BMF Enterprises",
+  "type": "module",
+  "scripts": {
+    "dev": "node server.js",
+    "import:igms": "node scripts/importers/igms.js",
+    "import:baselane": "node scripts/importers/baselane.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0",
+    "csv-parse": "^5.5.3",
+    "dotenv": "^16.4.1",
+    "papaparse": "^5.5.3"
+  },
+  "devDependencies": {
+    "vercel": "^50.32.1"
+  }
+}

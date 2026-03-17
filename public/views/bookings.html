@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>STR Ops — Bookings</title>
+
+  <link rel="stylesheet" href="/css/tokens.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/nav.css">
+  <link rel="stylesheet" href="/css/card.css">
+  <link rel="stylesheet" href="/css/table.css">
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+  <style>
+    .chart-card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--border-radius);
+      padding: var(--space-6);
+      margin-bottom: var(--space-6);
+    }
+    .chart-card h3 {
+      font-size: var(--text-lg);
+      margin-bottom: var(--space-5);
+    }
+    .chart-wrap {
+      position: relative;
+      height: 280px;
+    }
+    .kpi-strip {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: var(--space-4);
+      margin-bottom: var(--space-8);
+    }
+    .kpi-item__label {
+      font-size: var(--text-xs);
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--color-text-faint);
+      margin-bottom: var(--space-1);
+    }
+    .kpi-item__value {
+      font-family: var(--font-mono);
+      font-size: var(--text-xl);
+      font-weight: 500;
+      color: var(--color-text);
+    }
+    .kpi-item__value--highlight { color: var(--color-accent); }
+    @media (max-width: 900px) { .kpi-strip { grid-template-columns: repeat(3, 1fr); } }
+    @media (max-width: 640px) {
+      .kpi-strip { grid-template-columns: repeat(2, 1fr); }
+      .chart-wrap { height: 220px; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="nav">
+    <div class="nav__inner">
+      <a href="/" class="nav__brand">BMF <span>STR</span></a>
+      <ul class="nav__links">
+        <li><a href="/dashboard" class="nav__link">Dashboard</a></li>
+        <li><a href="/views/bookings" class="nav__link nav__link--active">Bookings</a></li>
+        <li><a href="/views/financials" class="nav__link">Financials</a></li>
+        <li><a href="/views/reports" class="nav__link">Reports</a></li>
+        <li><a href="/views/admin" class="nav__link">Admin</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <main class="main page" x-data="bookings()" x-init="init()">
+    <div class="container">
+
+      <!-- Header -->
+      <div style="margin-bottom: var(--space-8);">
+        <p class="text-faint text-sm text-mono">Bookings</p>
+        <h1>Performance</h1>
+      </div>
+
+      <!-- Filters -->
+      <div class="filter-bar" style="margin-bottom: var(--space-8);">
+        <select class="filter-select" x-model="selectedYear" @change="fetchData()">
+          <template x-for="year in years" :key="year">
+            <option :value="year" x-text="year"></option>
+          </template>
+        </select>
+
+        <select class="filter-select" x-model="selectedProperty" @change="fetchData()">
+          <option value="all">All Properties</option>
+          <template x-for="p in properties" :key="p.id">
+            <option :value="p.id" x-text="p.display_name"></option>
+          </template>
+        </select>
+      </div>
+
+      <!-- Loading -->
+      <div class="loading" x-show="loading">Loading...</div>
+
+      <!-- Content — always in DOM so canvas elements exist for Chart.js -->
+      <div x-show="!loading">
+
+        <!-- KPI Strip -->
+        <div class="kpi-strip">
+          <div class="kpi-item">
+            <div class="kpi-item__label">Gross Revenue</div>
+            <div class="kpi-item__value" x-text="fmt.currency(kpis.grossRevenue)"></div>
+          </div>
+          <div class="kpi-item">
+            <div class="kpi-item__label">Owner Revenue</div>
+            <div class="kpi-item__value" x-text="fmt.currency(kpis.ownerRevenue)"></div>
+          </div>
+          <div class="kpi-item">
+            <div class="kpi-item__label">Revenue Nights</div>
+            <div class="kpi-item__value" x-text="kpis.revenueNights"></div>
+          </div>
+          <div class="kpi-item">
+            <div class="kpi-item__label">Occupancy %</div>
+            <div class="kpi-item__value" x-text="fmt.pct(kpis.occupancy)"></div>
+          </div>
+          <div class="kpi-item">
+            <div class="kpi-item__label">ADR</div>
+            <div class="kpi-item__value" x-text="fmt.currency(kpis.adr)"></div>
+          </div>
+          <div class="kpi-item">
+            <div class="kpi-item__label">RevPAR</div>
+            <div class="kpi-item__value kpi-item__value--highlight" x-text="fmt.currency(kpis.revpar)"></div>
+          </div>
+        </div>
+
+        <hr class="divider">
+
+        <!-- Monthly Occupancy -->
+        <div class="chart-card">
+          <h3>Monthly Occupancy</h3>
+          <div class="chart-wrap">
+            <canvas id="occupancyChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Monthly Revenue -->
+        <div class="chart-card">
+          <h3>Monthly Revenue</h3>
+          <div class="chart-wrap">
+            <canvas id="revenueChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Booking Sources -->
+        <div class="chart-card">
+          <h3>Booking Sources</h3>
+          <div class="chart-wrap" style="height: 240px;">
+            <canvas id="sourcesChart"></canvas>
+          </div>
+        </div>
+
+        <hr class="divider">
+
+        <!-- Reservations Table -->
+        <div class="section-header">
+          <h3>Reservations</h3>
+          <span class="section-header__action text-mono" x-text="selectedYear"></span>
+        </div>
+
+        <div class="filter-bar" style="margin-bottom: var(--space-4);">
+          <select class="filter-select" x-model="tableMonth" @change="filterTable()">
+            <option value="all">All Months</option>
+            <template x-for="m in months" :key="m.value">
+              <option :value="m.value" x-text="m.label"></option>
+            </template>
+          </select>
+
+          <select class="filter-select" x-model="tableProperty" @change="filterTable()">
+            <option value="all">All Properties</option>
+            <template x-for="p in properties" :key="p.id">
+              <option :value="p.id" x-text="p.display_name"></option>
+            </template>
+          </select>
+
+          <select class="filter-select" x-model="tableStayType" @change="filterTable()">
+            <option value="all">All Stay Types</option>
+            <option value="Revenue">Revenue</option>
+            <option value="Owner Stay">Owner Stay</option>
+            <option value="Comp Stay">Comp Stay</option>
+          </select>
+
+          <select class="filter-select" x-model="tablePlatform" @change="filterTable()">
+            <option value="all">All Platforms</option>
+            <option value="airbnb">Airbnb</option>
+            <option value="vrbo">VRBO</option>
+            <option value="direct">Direct</option>
+          </select>
+        </div>
+
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Property</th>
+                <th>Check-in</th>
+                <th>Check-out</th>
+                <th class="right mono">Nights</th>
+                <th>Platform</th>
+                <th>Stay Type</th>
+                <th class="right mono">Payout</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="r in filteredReservations" :key="r.reservation_code">
+                <tr>
+                  <td><span class="property-badge" x-text="r.property_id"></span></td>
+                  <td class="text-sm" x-text="fmt.date(r.checkin_date)"></td>
+                  <td class="text-sm" x-text="fmt.date(r.checkout_date)"></td>
+                  <td class="right mono" x-text="r.nights"></td>
+                  <td class="text-sm" x-text="r.platform || '—'"></td>
+                  <td><span :class="badgeClass(r.stay_type)" x-text="r.stay_type"></span></td>
+                  <td class="right mono" x-text="fmt.currency(r.expected_total_payout)"></td>
+                </tr>
+              </template>
+              <tr x-show="filteredReservations.length === 0">
+                <td colspan="7" class="table-empty">No reservations found</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const PROP_COLORS = {
+      'hidden-hollow': { line: '#4A90A4', bar: '#4A90A4CC' },
+      'village-lane':  { line: '#9B7EC8', bar: '#9B7EC8CC' },
+      'lee-ct':        { line: '#E8A838', bar: '#E8A838CC' },
+      'walker':        { line: '#5FAD78', bar: '#5FAD78CC' },
+    }
+
+    const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+
+    const FONT = { family: "'IBM Plex Mono', monospace", size: 11 }
+    const GRID = '#E2DED6'
+    const TICK  = '#A09C95'
+
+    function baseOpts() {
+      return {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'top',
+            labels: { font: FONT, color: TICK, boxWidth: 12, padding: 16 },
+          },
+          tooltip: {
+            backgroundColor: '#1A1A1A',
+            titleFont: FONT,
+            bodyFont: FONT,
+            padding: 10,
+          },
+        },
+        scales: {
+          x: { grid: { color: GRID }, ticks: { font: FONT, color: TICK } },
+          y: { grid: { color: GRID }, ticks: { font: FONT, color: TICK } },
+        },
+      }
+    }
+
+    let charts = {}
+
+    function destroyCharts() {
+      Object.values(charts).forEach(c => c?.destroy())
+      charts = {}
+    }
+
+    function buildCharts(monthlyOccupancy, monthlyRevenue, bookingSources) {
+      destroyCharts()
+
+      // Occupancy line chart
+      const occOpts = baseOpts()
+      occOpts.scales.y.ticks.callback = v => v + '%'
+      charts.occ = new Chart(document.getElementById('occupancyChart'), {
+        type: 'line',
+        data: {
+          labels: MONTHS,
+          datasets: monthlyOccupancy.map(p => ({
+            label: p.display_name,
+            data: p.data,
+            borderColor: PROP_COLORS[p.property_id]?.line || '#888',
+            backgroundColor: 'transparent',
+            borderWidth: 2,
+            pointRadius: 3,
+            pointHoverRadius: 5,
+            tension: 0.3,
+          })),
+        },
+        options: occOpts,
+      })
+
+      // Revenue bar chart
+      const revOpts = baseOpts()
+      revOpts.scales.y.ticks.callback = v => '$' + (v >= 1000 ? (v/1000).toFixed(0) + 'k' : v)
+      charts.rev = new Chart(document.getElementById('revenueChart'), {
+        type: 'bar',
+        data: {
+          labels: MONTHS,
+          datasets: monthlyRevenue.map(p => ({
+            label: p.display_name,
+            data: p.data,
+            backgroundColor: PROP_COLORS[p.property_id]?.bar || '#88888888',
+            borderRadius: 2,
+          })),
+        },
+        options: revOpts,
+      })
+
+      // Sources stacked bar
+      const srcOpts = baseOpts()
+      srcOpts.scales.x.stacked = true
+      srcOpts.scales.y.stacked = true
+      charts.src = new Chart(document.getElementById('sourcesChart'), {
+        type: 'bar',
+        data: {
+          labels: bookingSources.map(p => p.display_name),
+          datasets: [
+            { label: 'Airbnb',  data: bookingSources.map(p => p.airbnb),  backgroundColor: '#4A90A4CC', borderRadius: 2 },
+            { label: 'VRBO',    data: bookingSources.map(p => p.vrbo),    backgroundColor: '#E8A838CC', borderRadius: 2 },
+            { label: 'Direct',  data: bookingSources.map(p => p.direct),  backgroundColor: '#9B7EC8CC', borderRadius: 2 },
+          ],
+        },
+        options: srcOpts,
+      })
+    }
+
+    function bookings() {
+      const now = new Date()
+      return {
+        loading: true,
+        selectedYear: now.getFullYear(),
+        selectedMonth: 'all',
+        selectedProperty: 'all',
+        tableMonth: 'all',
+        tableProperty: 'all',
+        tableStayType: 'all',
+        tablePlatform: 'all',
+        years: [],
+        months: [
+          { label: 'January', value: '1' },
+          { label: 'February', value: '2' },
+          { label: 'March', value: '3' },
+          { label: 'April', value: '4' },
+          { label: 'May', value: '5' },
+          { label: 'June', value: '6' },
+          { label: 'July', value: '7' },
+          { label: 'August', value: '8' },
+          { label: 'September', value: '9' },
+          { label: 'October', value: '10' },
+          { label: 'November', value: '11' },
+          { label: 'December', value: '12' }
+        ],
+        properties: [],
+        kpis: {},
+        reservations: [],
+        filteredReservations: [],
+        fmt: {
+          currency: v => v == null ? '—' : new Intl.NumberFormat('en-US', {
+            style: 'currency', currency: 'USD', maximumFractionDigits: 0
+          }).format(v),
+          pct: v => v == null ? '—' : (v * 100).toFixed(1) + '%',
+          date: v => v ? new Date(v + 'T00:00:00').toLocaleDateString('en-US', {
+            month: 'short', day: 'numeric'
+          }) : '—',
+        },
+        badgeClass(type) {
+          return {
+            'Revenue':         'badge badge--revenue',
+            'Owner Stay':      'badge badge--owner',
+            'Comp Stay':       'badge badge--comp',
+            'Flag for Review': 'badge badge--flagged',
+          }[type] || 'badge'
+        },
+        init: async function() {
+          await Promise.all([this.fetchProperties(), this.fetchYears()])
+          await this.fetchData()
+        },
+        fetchProperties: async function() {
+          const res = await fetch('/api/properties')
+          const data = await res.json()
+          this.properties = data.filter(p => p.active && p.id !== 'kenview')
+        },
+        fetchYears: async function() {
+          const res = await fetch('/api/reservations/years')
+          const data = await res.json()
+          this.years = data
+          if (data.length && !data.includes(this.selectedYear)) {
+            this.selectedYear = data[0]
+          }
+        },
+        fetchData: async function() {
+          this.loading = true
+          const params = new URLSearchParams({
+            year: this.selectedYear,
+            month: this.selectedMonth,
+            property: this.selectedProperty
+          })
+          const [metricsRes, rezsRes] = await Promise.all([
+            fetch(`/api/metrics/bookings?${params}`),
+            fetch(`/api/reservations?${params}`),
+          ])
+          const metrics = await metricsRes.json()
+          const rezData = await rezsRes.json()
+          this.kpis         = metrics.kpis
+          this.reservations = rezData
+          this.filterTable()
+          this.loading = false
+          // Canvas elements are now visible — build charts after short paint delay
+          setTimeout(() => {
+            buildCharts(metrics.monthlyOccupancy, metrics.monthlyRevenue, metrics.bookingSources)
+          }, 50)
+        },
+        filterTable: function() {
+          this.filteredReservations = this.reservations.filter(r => {
+            if (this.tableStayType !== 'all' && r.stay_type !== this.tableStayType) return false
+            if (this.tablePlatform !== 'all' && !(r.platform || '').toLowerCase().includes(this.tablePlatform)) return false
+            if (this.tableMonth && this.tableMonth !== 'all') {
+              const checkinMonth = new Date(r.checkin_date).getMonth() + 1
+              const checkoutMonth = new Date(r.checkout_date).getMonth() + 1
+              if (String(checkinMonth) !== this.tableMonth && String(checkoutMonth) !== this.tableMonth) return false
+            }
+            if (this.tableProperty && this.tableProperty !== 'all' && r.property_id !== this.tableProperty) return false
+            return true
+          })
+        }
+      }
+    }
+    </script>
+  </body>
+  </html>

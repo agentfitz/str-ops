@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BMF Getaways — Book Direct</title>
+  <meta name="description" content="Welcome back. Skip the platform fees and book directly with your hosts. Same great stay, better price.">
+  <link rel="stylesheet" href="/book-direct/book-direct.css">
+  <style>
+    .hero {
+      text-align: center;
+      padding-bottom: 56px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 56px;
+    }
+    .hero__eyebrow {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 24px;
+      display: block;
+    }
+    .hero__headline {
+      font-family: var(--font-serif);
+      font-size: clamp(2.25rem, 5vw, 3.25rem);
+      line-height: 1.15;
+      color: var(--ink);
+      margin-bottom: 24px;
+      letter-spacing: -0.01em;
+    }
+    .hero__headline em { font-style: italic; color: var(--accent); }
+    .hero__sub {
+      font-size: 1.125rem;
+      line-height: 1.75;
+      color: var(--ink-muted);
+      max-width: 520px;
+      margin: 0 auto 36px;
+    }
+    .hero__prompt {
+      font-family: var(--font-serif);
+      font-style: italic;
+      font-size: 1.25rem;
+      color: var(--ink);
+    }
+    .hero__prompt::after { content: ' ↓'; color: var(--accent); }
+
+    .properties {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 64px;
+    }
+    .property-card {
+      background: var(--warm-white);
+      border-radius: 6px;
+      overflow: hidden;
+      text-decoration: none;
+      color: inherit;
+      transition: transform 150ms ease, box-shadow 150ms ease;
+      border: 1px solid var(--border);
+    }
+    .property-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.08);
+    }
+    .property-card__photo {
+      width: 100%;
+      aspect-ratio: 4/3;
+      overflow: hidden;
+    }
+    .property-card__photo img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: transform 300ms ease;
+    }
+    .property-card:hover .property-card__photo img { transform: scale(1.03); }
+    .property-card__body { padding: 20px 22px 24px; }
+    .property-card__location {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 6px;
+    }
+    .property-card__name {
+      font-family: var(--font-serif);
+      font-size: 1.25rem;
+      color: var(--ink);
+      margin-bottom: 8px;
+      line-height: 1.2;
+    }
+    .property-card__desc {
+      font-size: 0.875rem;
+      line-height: 1.6;
+      color: var(--ink-muted);
+      margin-bottom: 16px;
+    }
+    .property-card__cta {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .property-card__cta::after { content: '→'; transition: transform 150ms ease; }
+    .property-card:hover .property-card__cta::after { transform: translateX(4px); }
+
+    .signoff {
+      text-align: center;
+      padding-top: 48px;
+      border-top: 1px solid var(--border);
+    }
+    .signoff__photo {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      margin: 0 auto 16px;
+      overflow: hidden;
+    }
+    .signoff__photo img { width: 100%; height: 100%; object-fit: cover; }
+    .signoff__text {
+      font-family: var(--font-serif);
+      font-style: italic;
+      font-size: 1.0625rem;
+      color: var(--ink-muted);
+      line-height: 1.7;
+      max-width: 420px;
+      margin: 0 auto 12px;
+    }
+    .signoff__name {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+    }
+    @media (max-width: 560px) { .properties { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="page">
+
+    <div class="hero fade-1">
+      <span class="hero__eyebrow">BMF Getaways · Hosted by Brian & Moriah</span>
+      <h1 class="hero__headline">
+        You already know us.<br>
+        <em>Welcome back.</em>
+      </h1>
+      <p class="hero__sub">
+        You found one of our places, you stayed, and something brought you back here.
+        We love that. Booking direct means no platform fees — just you, us,
+        and the same great stay for less.
+      </p>
+      <div class="hero__prompt">Which property is calling your name?</div>
+    </div>
+
+    <div class="properties fade-2">
+
+      <a href="/canal-front-cottage" class="property-card">
+        <div class="property-card__photo">
+          <img src="/book-direct/img/canal-front-cottage.avif" alt="Canal Front Cottage">
+        </div>
+        <div class="property-card__body">
+          <div class="property-card__location">Kill Devil Hills · OBX</div>
+          <div class="property-card__name">Canal Front Cottage</div>
+          <div class="property-card__desc">Waterfront views, kayaks, and those golden OBX sunsets. No platform fees — just clean pricing, and nothing added on top.</div>
+          <div class="property-card__cta">Book Direct</div>
+        </div>
+      </a>
+
+      <a href="/hidden-hollow" class="property-card">
+        <div class="property-card__photo">
+          <img src="/book-direct/img/hidden-hollow.avif" alt="Hidden Hollow">
+        </div>
+        <div class="property-card__body">
+          <div class="property-card__location">Slatyfork · Snowshoe, WV</div>
+          <div class="property-card__name">Hidden Hollow</div>
+          <div class="property-card__desc">A mountain chalet worth the drive. Book direct and keep Airbnb's 14% service fee in your pocket where it belongs.</div>
+          <div class="property-card__cta">Book Direct</div>
+        </div>
+      </a>
+
+      <a href="/village-lane" class="property-card">
+        <div class="property-card__photo">
+          <img src="/book-direct/img/village-lane.avif" alt="Village Lane">
+        </div>
+        <div class="property-card__body">
+          <div class="property-card__location">Greensboro, NC</div>
+          <div class="property-card__name">Village Lane</div>
+          <div class="property-card__desc">A quiet, well-stocked home base in Greensboro. What you see is what you pay — no surprise charges at checkout.</div>
+          <div class="property-card__cta">Book Direct</div>
+        </div>
+      </a>
+
+      <a href="/lindley-park-cottage" class="property-card">
+        <div class="property-card__photo">
+          <img src="/book-direct/img/lindley-park-cottage.avif" alt="Lindley Park Cottage">
+        </div>
+        <div class="property-card__body">
+          <div class="property-card__location">Greensboro, NC · Lindley Park</div>
+          <div class="property-card__name">Lindley Park Cottage</div>
+          <div class="property-card__desc">Walkable neighborhood, great restaurants, local feel. Skip the middleman and pay the nightly rate, full stop.</div>
+          <div class="property-card__cta">Book Direct</div>
+        </div>
+      </a>
+
+    </div>
+
+    <div class="signoff fade-3">
+      <div class="signoff__photo">
+        <img src="/book-direct/img/brian-moriah.jpg" alt="Brian and Moriah">
+      </div>
+      <div class="signoff__text">
+        "Every guest who comes back is a guest we did something right for.
+        Thanks for trusting us with your trip — we don't take that lightly."
+      </div>
+      <div class="signoff__name">Brian & Moriah · 20 consecutive quarters as Superhost</div>
+    </div>
+
+  </div>
+  <script>
+    const base = window.location.hostname === 'localhost' ? '/book-direct' : '';
+    document.querySelectorAll('.property-card').forEach(card => {
+      card.href = base + card.getAttribute('href');
+    });
+  </script>
+</body>
+</html>

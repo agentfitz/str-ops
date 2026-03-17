@@ -1,0 +1,120 @@
+/* card.css — metric cards and content cards */
+
+/* ── Base card ───────────────────────────── */
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  padding: var(--space-6);
+}
+
+/* ── Metric card ─────────────────────────── */
+.metric-card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  padding: var(--space-5) var(--space-6);
+  background: var(--color-surface);
+}
+
+/* Pastel color variants */
+.metric-card:nth-child(1) { background: #EDF4F0; border-color: #C8DDD4; } /* sage green */
+.metric-card:nth-child(2) { background: #EEF1F8; border-color: #C8D0E8; } /* periwinkle */
+.metric-card:nth-child(3) { background: #F5F0E8; border-color: #E0D5C0; } /* warm sand */
+.metric-card:nth-child(4) { background: #F3EEF5; border-color: #DCCEE3; } /* lavender */
+.metric-card:nth-child(5) { background: #EEF4F5; border-color: #C8D8DC; } /* sky */
+
+.metric-card__label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-faint);
+  margin-bottom: var(--space-2);
+}
+
+.metric-card__value {
+  font-family: var(--font-mono);
+  font-size: var(--text-3xl);
+  font-weight: 500;
+  color: var(--color-text);
+  line-height: 1;
+  margin-bottom: var(--space-2);
+}
+
+.metric-card__value--large {
+  font-size: var(--text-4xl);
+}
+
+.metric-card__delta {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-faint);
+}
+
+.metric-card__delta--positive { color: var(--color-accent); }
+.metric-card__delta--negative { color: var(--color-negative); }
+
+/* ── Metric grid ─────────────────────────── */
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: var(--space-4);
+  margin-bottom: var(--space-8);
+}
+
+/* ── Section header ──────────────────────── */
+.section-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: var(--space-5);
+  gap: var(--space-4);
+}
+
+.section-header h2,
+.section-header h3 {
+  font-size: var(--text-xl);
+}
+
+.section-header__action {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+/* ── Property badge ──────────────────────── */
+.property-badge {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  padding: 2px var(--space-2);
+  border-radius: 2px;
+  background: var(--color-accent-light);
+  color: var(--color-accent);
+  white-space: nowrap;
+}
+
+/* ── Status badge ────────────────────────── */
+.badge {
+  display: inline-block;
+  font-size: var(--text-xs);
+  font-weight: 500;
+  padding: 2px var(--space-2);
+  border-radius: 2px;
+  white-space: nowrap;
+}
+
+.badge--revenue  { background: var(--color-accent-light); color: var(--color-accent); }
+.badge--owner    { background: #EEF0F8; color: #3D4A8A; }
+.badge--comp     { background: var(--color-warning-bg); color: var(--color-warning); }
+.badge--flagged  { background: var(--color-negative-bg); color: var(--color-negative); }
+
+@media (max-width: 900px) {
+  .metric-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 640px) {
+  .metric-grid { grid-template-columns: repeat(2, 1fr); }
+  .metric-card__value { font-size: var(--text-2xl); }
+}

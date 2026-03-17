@@ -1,0 +1,36 @@
+{
+  "cleanUrls": true,
+  "rewrites": [
+    {
+      "source": "/",
+      "has": [{ "type": "host", "value": "stay.bmf.llc" }],
+      "destination": "/book-direct/index"
+    },
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": "stay.bmf.llc" }],
+      "destination": "/book-direct/$1"
+    },
+    {
+      "source": "/",
+      "has": [{ "type": "host", "value": "ops.bmf.llc" }],
+      "destination": "/dashboard"
+    },
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": "ops.bmf.llc" }],
+      "destination": "/views/$1"
+    },
+    { "source": "/api/(.*)", "destination": "/api/$1" }
+  ],
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Access-Control-Allow-Methods", "value": "GET,POST,PUT,DELETE,OPTIONS" },
+        { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Authorization" }
+      ]
+    }
+  ]
+}
