@@ -133,6 +133,17 @@
           Export from Baselane → Transactions → Export CSV. Safe to re-upload — duplicates handled automatically.
         </p>
 
+        <details style="margin-bottom: var(--space-5);">
+          <summary class="text-sm text-mono" style="cursor: pointer; color: var(--color-text-faint); letter-spacing: 0.04em;">
+            Large file? Use CLI instead ›
+          </summary>
+          <div style="margin-top: var(--space-3); padding: var(--space-4); background: var(--color-bg); border-radius: var(--border-radius); border: 1px solid var(--color-border);">
+            <p class="text-sm text-muted" style="margin-bottom: var(--space-3);">For bulk re-imports or large exports, run locally to avoid browser timeouts:</p>
+            <pre style="font-family: var(--font-mono); font-size: var(--text-xs); color: var(--color-text); background: #1A1A1A; color: #F7F5F0; padding: var(--space-4); border-radius: var(--border-radius); overflow-x: auto; line-height: 1.7; margin: 0;">npm run import:baselane path/to/Transactions_20XX.csv</pre>
+            <p class="text-sm text-muted" style="margin-top: var(--space-3);">Requires <code style="font-family: var(--font-mono); font-size: var(--text-xs);">.env</code> with <code style="font-family: var(--font-mono); font-size: var(--text-xs);">SUPABASE_URL</code> and <code style="font-family: var(--font-mono); font-size: var(--text-xs);">SUPABASE_SERVICE_KEY</code>. Safe to re-run — hashes prevent duplicates.</p>
+          </div>
+        </details>
+
         <div class="upload-zone"
           :class="{ 'upload-zone--dragover': dragging }"
           @dragover.prevent="dragging = true"
