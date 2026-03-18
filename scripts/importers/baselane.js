@@ -80,14 +80,20 @@ for (const r of records) {
   })
 }
 
-for (let i = 0; i < rows.length; i += BATCH_SIZE) {
-  const batch = rows.slice(i, i + BATCH_SIZE)
+// Deduplicate by hash — CSV may contain duplicate rows that would cause
+// "ON CONFLICT DO UPDATE command cannot affect row a second time" errors
+const seen = new Map()
+for (const row of rows) seen.set(row.source_hash, row)
+const dedupedRows = [...seen.values()]
+
+for (let i = 0; i < dedupedRows.length; i += BATCH_SIZE) {
+  const batch = dedupedRows.slice(i, i + BATCH_SIZE)
   const { error } = await supabase
     .from('expenses')
     .upsert(batch, { onConflict: 'source_hash' })
 
   if (error) {
-    console.error(`Batch ${i / BATCH_SIZE + 1} error:`, error.message)
+    console.error(`Batch ${Math.floor(i / BATCH_SIZE) + 1} error:`, error.message)
     errors += batch.length
   } else {
     inserted += batch.length

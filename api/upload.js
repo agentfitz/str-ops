@@ -154,8 +154,12 @@ async function importBaselane(csvBuffer) {
     })
   }
 
-  for (let i = 0; i < rows.length; i += BATCH_SIZE) {
-    const batch = rows.slice(i, i + BATCH_SIZE)
+  const seen = new Map()
+  for (const row of rows) seen.set(row.source_hash, row)
+  const dedupedRows = [...seen.values()]
+
+  for (let i = 0; i < dedupedRows.length; i += BATCH_SIZE) {
+    const batch = dedupedRows.slice(i, i + BATCH_SIZE)
     const { error } = await supabase
       .from('expenses')
       .upsert(batch, { onConflict: 'source_hash' })
