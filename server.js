@@ -65,8 +65,14 @@ const server = http.createServer(async (req, res) => {
 
     // Build a minimal req/res compatible with our Vercel-style handlers
     req.query = query
-    if (req.method === 'POST') {
-      req.body = await readBody(req)
+    if (req.method === 'POST' || req.method === 'PUT') {
+      const raw = await readBody(req)
+      const contentType = req.headers['content-type'] || ''
+      if (contentType.includes('application/json')) {
+        try { req.body = JSON.parse(raw.toString()) } catch { req.body = {} }
+      } else {
+        req.body = raw
+      }
     }
 
     const mockRes = {

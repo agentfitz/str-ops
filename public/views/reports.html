@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>STR Ops — Reports</title>
+
+  <link rel="stylesheet" href="/css/tokens.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/nav.css">
+  <link rel="stylesheet" href="/css/card.css">
+  <link rel="stylesheet" href="/css/table.css">
+  <link rel="stylesheet" href="/css/form.css">
+
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body x-data="reportsAdmin()" x-init="init()">
+
+  <nav class="nav">
+    <div class="nav__inner">
+      <a href="/" class="nav__brand">BMF <span>STR</span></a>
+      <ul class="nav__links">
+        <li><a href="/" class="nav__link">Dashboard</a></li>
+        <li><a href="/views/bookings" class="nav__link">Bookings</a></li>
+        <li><a href="/views/financials" class="nav__link">Financials</a></li>
+        <li><a href="/views/reports" class="nav__link nav__link--active">Reports</a></li>
+        <li><a href="/views/admin" class="nav__link">Admin</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <main class="main page">
+    <div class="container" style="max-width: 680px;">
+
+      <div style="margin-bottom: var(--space-8);">
+        <p class="text-faint text-sm text-mono">Reports</p>
+        <h1>Owner Reports</h1>
+        <p class="text-muted" style="margin-top: var(--space-2);">
+          Generate, review, and publish monthly reports for property owners.
+        </p>
+      </div>
+
+      <!-- ── Generate Form ──────────────────────────────────── -->
+      <div class="card" style="margin-bottom: var(--space-6);">
+        <h4 style="margin-bottom: var(--space-5);">Generate Report</h4>
+
+        <div style="display: flex; flex-direction: column; gap: var(--space-4);">
+
+          <!-- Property selector -->
+          <div class="form-group">
+            <label class="form-label">Property</label>
+            <select class="form-select" x-model="form.property_id" @change="onPropertyChange()">
+              <option value="">Select a property...</option>
+              <template x-for="p in reportableProperties" :key="p.id">
+                <option :value="p.id" x-text="p.display_name"></option>
+              </template>
+            </select>
+          </div>
+
+          <!-- Owner selector (filtered to property) -->
+          <div class="form-group" x-show="form.property_id">
+            <label class="form-label">Owner</label>
+            <select class="form-select" x-model="form.owner_id">
+              <option value="">Select an owner...</option>
+              <template x-for="o in ownersForProperty" :key="o.id">
+                <option :value="o.id" x-text="o.name + (o.ownership_pct < 100 ? ' (' + o.ownership_pct + '%)' : '')"></option>
+              </template>
+            </select>
+          </div>
+
+          <!-- Month + Year -->
+          <div style="display: flex; gap: var(--space-4);">
+            <div class="form-group" style="flex: 1;">
+              <label class="form-label">Month</label>
+              <select class="form-select" x-model="form.month">
+                <option value="">Month</option>
+                <template x-for="m in months" :key="m.value">
+                  <option :value="m.value" x-text="m.label"></option>
+                </template>
+              </select>
+            </div>
+            <div class="form-group" style="flex: 1;">
+              <label class="form-label">Year</label>
+              <select class="form-select" x-model="form.year">
+                <template x-for="y in years" :key="y">
+                  <option :value="y" x-text="y"></option>
+                </template>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <button class="btn btn--primary" @click="generate()" :disabled="!canGenerate || generating">
+              <span x-text="generating ? 'Generating...' : 'Generate Report'"></span>
+            </button>
+          </div>
+
+        </div><!-- /form fields -->
+
+        <!-- Conflict warning -->
+        <div x-show="conflict" style="
+          margin-top: var(--space-5);
+          background: var(--color-warning-bg);
+          border: 1px solid #e0c98b;
+          border-radius: var(--border-radius);
+          padding: var(--space-4) var(--space-5);
+        ">
+          <p style="font-size: var(--text-sm); color: var(--color-warning); margin-bottom: var(--space-3);">
+            A report already exists for this property, owner, and month.
+          </p>
+          <div style="display: flex; gap: var(--space-3);">
+            <button class="btn btn--secondary" style="font-size: var(--text-sm);" @click="generate(true)">
+              Overwrite &amp; Regenerate
+            </button>
+            <button class="btn btn--ghost" style="font-size: var(--text-sm);" @click="conflict = false">
+              Cancel
+            </button>
+          </div>
+        </div>
+
+        <!-- Generate error -->
+        <div x-show="generateError" style="margin-top: var(--space-4);">
+          <p class="text-sm" style="color: var(--color-negative);" x-text="generateError"></p>
+        </div>
+
+      </div><!-- /card -->
+
+      <!-- ── Draft Editor ───────────────────────────────────── -->
+      <div class="card" x-show="draftReport" style="margin-bottom: var(--space-6);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-5);">
+          <h4>
+            <span x-text="getPropertyName(form.property_id)"></span>
+            — <span x-text="getMonthLabel(form.month)"></span> <span x-text="form.year"></span>
+          </h4>
+          <span
+            class="text-mono text-xs"
+            :style="draftReport?.status === 'published' ? 'color: var(--color-accent)' : 'color: var(--color-warning)'"
+            x-text="draftReport?.status === 'published' ? 'Published' : 'Draft'"
+          ></span>
+        </div>
+
+        <!-- AI warning -->
+        <div x-show="aiWarning" style="
+          margin-bottom: var(--space-5);
+          background: var(--color-negative-bg);
+          border: 1px solid #e8c4c4;
+          border-radius: var(--border-radius);
+          padding: var(--space-3) var(--space-4);
+        ">
+          <p style="font-size: var(--text-sm); font-weight: 500; color: var(--color-negative); margin-bottom: var(--space-1);">
+            AI summary failed — report saved without it.
+          </p>
+          <p class="text-mono text-xs" style="color: var(--color-negative); opacity: 0.8; word-break: break-word;" x-text="aiWarning"></p>
+        </div>
+
+        <!-- AI Summary editor -->
+        <div class="form-group" style="margin-bottom: var(--space-5);">
+          <label class="form-label">Executive Summary</label>
+          <textarea
+            class="form-textarea"
+            rows="6"
+            x-model="draftSummary"
+            :disabled="draftReport?.status === 'published'"
+            placeholder="AI-generated summary will appear here..."
+            style="font-size: var(--text-base); line-height: 1.7;"
+          ></textarea>
+        </div>
+
+        <!-- Manual notes -->
+        <div class="form-group" style="margin-bottom: var(--space-5);">
+          <label class="form-label">Notes from Brian <span class="text-faint text-sm">(optional)</span></label>
+          <textarea
+            class="form-textarea"
+            rows="3"
+            x-model="draftNotes"
+            :disabled="draftReport?.status === 'published'"
+            placeholder="Add any personal notes or context for the owner..."
+          ></textarea>
+        </div>
+
+        <div style="display: flex; gap: var(--space-3); flex-wrap: wrap; align-items: center;">
+          <template x-if="draftReport?.status !== 'published'">
+            <span>
+              <button class="btn btn--secondary" @click="saveDraft()" :disabled="saving" x-text="saving ? 'Saving...' : 'Save Draft'"></button>
+              <button class="btn btn--primary" @click="publish()" :disabled="publishing" x-text="publishing ? 'Publishing...' : 'Publish'" style="margin-left: var(--space-3);"></button>
+            </span>
+          </template>
+          <a
+            :href="reportViewUrl()"
+            target="_blank"
+            class="btn btn--ghost"
+            x-show="draftReport?.status === 'published'"
+          >
+            View Report →
+          </a>
+          <button
+            class="btn btn--ghost"
+            x-show="draftReport?.status !== 'published'"
+            style="font-size: var(--text-sm);"
+            @click="saveAndPreview()"
+            :disabled="saving"
+          >
+            Preview →
+          </button>
+        </div>
+
+        <div x-show="saveMessage" style="margin-top: var(--space-3);">
+          <p class="text-sm" style="color: var(--color-accent);" x-text="saveMessage"></p>
+        </div>
+        <div x-show="saveError" style="margin-top: var(--space-3);">
+          <p class="text-sm" style="color: var(--color-negative);" x-text="saveError"></p>
+        </div>
+
+      </div><!-- /draft editor -->
+
+      <!-- ── All Reports Table ──────────────────────────────── -->
+      <div>
+        <h4 style="margin-bottom: var(--space-4);">All Reports</h4>
+
+        <div x-show="reportsLoading">
+          <p class="text-sm text-muted">Loading...</p>
+        </div>
+
+        <div x-show="!reportsLoading && allReports.length === 0">
+          <p class="text-sm text-muted">No reports generated yet.</p>
+        </div>
+
+        <table class="table" x-show="!reportsLoading && allReports.length > 0">
+          <thead>
+            <tr>
+              <th>Property</th>
+              <th>Owner</th>
+              <th>Period</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="r in allReports" :key="r.id">
+              <tr>
+                <td x-text="r.property_name"></td>
+                <td x-text="r.owner_name"></td>
+                <td class="text-mono text-sm" x-text="getMonthLabel(r.month) + ' ' + r.year"></td>
+                <td>
+                  <span
+                    class="text-mono text-xs"
+                    :style="r.status === 'published' ? 'color: var(--color-accent)' : 'color: var(--color-warning)'"
+                    x-text="r.status"
+                  ></span>
+                </td>
+                <td style="text-align: right;">
+                  <a
+                    :href="buildReportUrl(r)"
+                    target="_blank"
+                    class="text-sm"
+                    style="color: var(--color-accent);"
+                  >
+                    View →
+                  </a>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </main>
+
+  <script>
+    const MONTH_NAMES = ['', 'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December']
+
+    // Properties that get reports (exclude kenview)
+    const REPORTABLE = ['village-lane', 'walker', 'hidden-hollow', 'lee-ct']
+
+    function reportsAdmin() {
+      return {
+        // Form state
+        form: {
+          property_id: '',
+          owner_id:    '',
+          month:       new Date().getMonth() || 12, // default to last month
+          year:        new Date().getMonth() === 0 ? new Date().getFullYear() - 1 : new Date().getFullYear(),
+        },
+
+        // Data
+        properties:       [],
+        allOwners:        [],
+        ownersForProperty:[],
+        allReports:       [],
+
+        // UI state
+        generating:     false,
+        conflict:       false,
+        generateError:  '',
+        aiWarning:      '',
+        reportsLoading: true,
+        saving:         false,
+        publishing:     false,
+        saveMessage:    '',
+        saveError:      '',
+
+        // Draft editor
+        draftReport:  null,
+        draftSummary: '',
+        draftNotes:   '',
+
+        months: MONTH_NAMES.slice(1).map((label, i) => ({ value: i + 1, label })),
+        years:  [2026, 2025, 2024],
+
+        get reportableProperties() {
+          return this.properties.filter(p => REPORTABLE.includes(p.id))
+        },
+
+        get canGenerate() {
+          return this.form.property_id && this.form.owner_id && this.form.month && this.form.year
+        },
+
+        async init() {
+          await Promise.all([this.loadProperties(), this.loadAllReports()])
+        },
+
+        async loadProperties() {
+          const res  = await fetch('/api/properties')
+          const data = await res.json()
+          this.properties = data || []
+        },
+
+        async onPropertyChange() {
+          this.form.owner_id    = ''
+          this.ownersForProperty = []
+          this.draftReport      = null
+          if (!this.form.property_id) return
+
+          const res  = await fetch(`/api/owners?property=${this.form.property_id}`)
+          const data = await res.json()
+          this.ownersForProperty = data || []
+          // Pre-select majority owner
+          if (this.ownersForProperty.length === 1) {
+            this.form.owner_id = this.ownersForProperty[0].id
+          } else if (this.ownersForProperty.length > 1) {
+            const majority = this.ownersForProperty.reduce((a, b) => a.ownership_pct >= b.ownership_pct ? a : b)
+            this.form.owner_id = majority.id
+          }
+        },
+
+        async generate(overwrite = false) {
+          if (!this.canGenerate) return
+          this.conflict      = false
+          this.generateError = ''
+          this.aiWarning     = ''
+          this.generating    = true
+          this.draftReport   = null
+
+          try {
+            const res = await fetch('/api/owner-reports/generate', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                property_id: this.form.property_id,
+                owner_id:    this.form.owner_id,
+                month:       parseInt(this.form.month),
+                year:        parseInt(this.form.year),
+                overwrite:   overwrite || undefined,
+              }),
+            })
+
+            if (res.status === 409) {
+              this.conflict = true
+              return
+            }
+
+            if (!res.ok) {
+              const err = await res.json()
+              throw new Error(err.error || 'Generation failed')
+            }
+
+            const data = await res.json()
+            this.draftReport  = data.report
+            this.draftSummary = data.report.ai_summary || ''
+            this.draftNotes   = data.report.manual_notes || ''
+            if (data.aiWarning) this.aiWarning = data.aiWarning
+            await this.loadAllReports()
+
+          } catch (err) {
+            this.generateError = err.message
+          } finally {
+            this.generating = false
+          }
+        },
+
+        async saveDraft() {
+          if (!this.draftReport) return
+          this.saving      = true
+          this.saveMessage = ''
+          this.saveError   = ''
+
+          try {
+            const res = await fetch('/api/owner-reports/save', {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                id:           this.draftReport.id,
+                ai_summary:   this.draftSummary,
+                manual_notes: this.draftNotes,
+              }),
+            })
+            if (!res.ok) {
+              const err = await res.json()
+              throw new Error(err.error || 'Save failed')
+            }
+            const data = await res.json()
+            this.draftReport  = data.report
+            this.saveMessage  = 'Saved.'
+            setTimeout(() => { this.saveMessage = '' }, 3000)
+          } catch (err) {
+            this.saveError = err.message
+          } finally {
+            this.saving = false
+          }
+        },
+
+        async publish() {
+          if (!this.draftReport) return
+          // Save first, then publish
+          await this.saveDraft()
+          this.publishing = true
+          this.saveError  = ''
+
+          try {
+            const res = await fetch('/api/owner-reports/publish', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ id: this.draftReport.id }),
+            })
+            if (!res.ok) {
+              const err = await res.json()
+              throw new Error(err.error || 'Publish failed')
+            }
+            const data = await res.json()
+            this.draftReport = data.report
+            await this.loadAllReports()
+          } catch (err) {
+            this.saveError = err.message
+          } finally {
+            this.publishing = false
+          }
+        },
+
+        async saveAndPreview() {
+          await this.saveDraft()
+          const url = this.reportViewUrl()
+          if (url !== '#') window.open(url, '_blank')
+        },
+
+        async loadAllReports() {
+          this.reportsLoading = true
+          try {
+            const res  = await fetch('/api/owner-reports')
+            const data = await res.json()
+            this.allReports = data || []
+          } finally {
+            this.reportsLoading = false
+          }
+        },
+
+        getPropertyName(id) {
+          return this.properties.find(p => p.id === id)?.display_name || id
+        },
+
+        getMonthLabel(m) {
+          return MONTH_NAMES[parseInt(m)] || ''
+        },
+
+        reportViewUrl() {
+          if (!this.draftReport || !this.form.property_id) return '#'
+          const owner = this.ownersForProperty.find(o => o.id === this.form.owner_id)
+          if (!owner?.slug) return '#'
+          const mm   = String(this.form.month).padStart(2, '0')
+          const yyyy = this.form.year
+          return `/views/owner-report?property=${this.form.property_id}&owner=${owner.slug}&month=${this.form.month}&year=${yyyy}`
+        },
+
+        buildReportUrl(report) {
+          if (!report.owner_slug) return '#'
+          const mm   = String(report.month).padStart(2, '0')
+          const yyyy = report.year
+          return `/views/owner-report?property=${report.property_id}&owner=${report.owner_slug}&month=${report.month}&year=${yyyy}`
+        },
+      }
+    }
+  </script>
+
+</body>
+</html>

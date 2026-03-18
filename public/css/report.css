@@ -1,0 +1,301 @@
+/* report.css — owner report viewer styles */
+/* Used by owner-report.html — kept separate from card.css / dashboard styles */
+
+/* ── Layout ──────────────────────────────────────────────────── */
+.report-container {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: var(--space-8) var(--space-6);
+}
+
+/* ── Draft banner ────────────────────────────────────────────── */
+.report-draft-banner {
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  text-align: center;
+  padding: var(--space-3) var(--space-4);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-bottom: 1px solid #e0c98b;
+}
+
+/* ── Header ──────────────────────────────────────────────────── */
+.report-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.report-header__left {
+  flex: 1;
+}
+
+.report-header__right {
+  text-align: right;
+  padding-left: var(--space-6);
+  flex-shrink: 0;
+}
+
+.report-header__eyebrow {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-faint);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: var(--space-3);
+}
+
+.report-header__title {
+  font-family: var(--font-display);
+  font-size: var(--text-4xl);
+  font-weight: 400;
+  color: var(--color-text);
+  line-height: 1.1;
+  margin: 0 0 var(--space-2);
+}
+
+.report-header__meta {
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  color: var(--color-text-muted);
+}
+
+.report-header__ytd-label {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-accent);
+  margin-bottom: var(--space-1);
+}
+
+.report-header__ytd-amount {
+  font-family: var(--font-mono);
+  font-size: var(--text-xl);
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+/* ── Payout hero ─────────────────────────────────────────────── */
+.report-payout-hero {
+  background: #dcf3f4;
+  border-radius: var(--border-radius);
+  padding: var(--space-5) var(--space-8);
+  margin-bottom: var(--space-4);
+  text-align: center;
+}
+
+.report-payout-hero__label {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-accent);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: var(--space-3);
+}
+
+.report-payout-hero__amount {
+  font-family: var(--font-mono);
+  font-size: var(--text-4xl);
+  font-weight: 500;
+  color: var(--color-accent);
+  line-height: 1;
+  margin-bottom: var(--space-3);
+}
+
+.report-payout-hero__note {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+/* ── Sections ────────────────────────────────────────────────── */
+.report-section {
+  padding-top: var(--space-6);
+  margin-top: var(--space-4);
+}
+
+.report-section__heading {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-faint);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: var(--space-5);
+}
+
+/* ── Pill section headings (bookings / coming up) ────────────── */
+.report-section__pill {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: var(--space-1) var(--space-3);
+  border-radius: 2px;
+  margin-bottom: var(--space-5);
+}
+
+.report-section__pill--green {
+  background: #D4EDDA;
+  color: #1D4A35;
+}
+
+.report-section__pill--yellow {
+  background: #FFF3CD;
+  color: #7A5C1E;
+}
+
+/* ── Executive summary ───────────────────────────────────────── */
+.report-summary__body {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  line-height: 1.8;
+  color: var(--color-text);
+}
+
+/* ── Occupancy snapshot ──────────────────────────────────────── */
+.report-occupancy__stat {
+  font-family: var(--font-mono);
+  font-size: var(--text-3xl);
+  font-weight: 500;
+  color: var(--color-text);
+  margin-bottom: var(--space-2);
+}
+
+.report-occupancy__detail {
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  color: var(--color-text-muted);
+  line-height: 1.7;
+}
+
+/* ── Financials ──────────────────────────────────────────────── */
+.report-financials {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.report-financials__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  color: var(--color-text-muted);
+}
+
+.report-financials__row--total {
+  color: var(--color-accent);
+  font-size: var(--text-xl);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.report-financials__amount {
+  font-family: var(--font-mono);
+  font-size: var(--text-base);
+}
+
+.report-financials__row--total .report-financials__amount {
+  font-size: var(--text-2xl);
+  font-weight: 500;
+}
+
+/* ── Bookings table ──────────────────────────────────────────── */
+.report-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+.report-table th {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-faint);
+  text-align: left;
+  padding: 0 var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.report-table th:last-child,
+.report-table td:last-child {
+  text-align: right;
+}
+
+.report-table td {
+  font-family: var(--font-body);
+  color: var(--color-text);
+  padding: var(--space-3) var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: top;
+}
+
+.report-table td.mono {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}
+
+.report-table__empty {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-text-faint);
+  font-style: italic;
+  padding: var(--space-4) 0;
+}
+
+/* ── Footer ──────────────────────────────────────────────────── */
+.report-footer {
+  margin-top: var(--space-12);
+  padding-top: var(--space-8);
+  border-top: 1px solid var(--color-border);
+  text-align: center;
+}
+
+.report-footer__text {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-text-faint);
+  line-height: 1.8;
+}
+
+.report-footer__brand {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-faint);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-top: var(--space-3);
+}
+
+/* ── Print ───────────────────────────────────────────────────── */
+@media print {
+  .nav,
+  .report-draft-banner {
+    display: none !important;
+  }
+
+  body {
+    background: white;
+  }
+
+  .report-payout-hero {
+    border: 2px solid var(--color-accent);
+    background: white;
+    page-break-inside: avoid;
+  }
+
+  .report-financials {
+    page-break-inside: avoid;
+  }
+
+  .report-container {
+    padding: 0;
+  }
+}

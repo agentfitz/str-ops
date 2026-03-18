@@ -4,21 +4,24 @@
 
 -- ── Properties ────────────────────────────────────────────────
 create table properties (
-  id                text primary key,       -- 'lee-ct', 'hidden-hollow', etc.
-  display_name      text not null,          -- 'Lee Ct', 'Hidden Hollow', etc.
-  market            text,                   -- 'OBX', 'Snowshoe', 'Greensboro'
-  address           text,
-  igms_name         text,                   -- exact string from IGMS export
-  baselane_name     text,                   -- exact string from Baselane export
-  available_nights  int default 365,
-  active            boolean default true,   -- false until property goes live
-  created_at        timestamptz default now()
+  id                   text primary key,       -- 'lee-ct', 'hidden-hollow', etc.
+  display_name         text not null,          -- 'Lee Ct', 'Hidden Hollow', etc.
+  public_name          text,                   -- guest-facing name (book-direct, marketing)
+  market               text,                   -- 'OBX', 'Snowshoe', 'Greensboro'
+  address              text,
+  igms_name            text,                   -- exact string from IGMS export
+  baselane_name        text,                   -- exact string from Baselane export
+  available_nights     int default 365,
+  active               boolean default true,   -- false until property goes live
+  pm_commission_rate   numeric(5,2) default 0.00, -- e.g. 16.00 = 16%
+  created_at           timestamptz default now()
 );
 
 -- ── Owners ────────────────────────────────────────────────────
 create table owners (
   id          uuid primary key default gen_random_uuid(),
   name        text not null,
+  slug        text,                   -- url-safe identifier, e.g. 'michael-fitzgerald'
   email       text,
   phone       text,
   notes       text,
@@ -75,6 +78,7 @@ create table expenses (
   subcategory   text,
   account       text,                      -- raw Baselane account string
   notes         text,
+  source_hash   text unique,               -- SHA-256 of date+merchant+amount+property+description (upsert key)
   imported_at   timestamptz default now()
 );
 
@@ -103,22 +107,23 @@ create index idx_expenses_date            on expenses(date);
 create index idx_owner_reports_property   on owner_reports(property_id, year, month);
 
 -- ── Seed: Properties ──────────────────────────────────────────
-insert into properties (id, display_name, market, address, igms_name, baselane_name, available_nights, active) values
-  ('village-lane',  'Village Lane',  'Greensboro', '306 Village Lane, Greensboro, NC 27409',   'Village Lane',      'Village Lane',  365, true),
-  ('walker',        'Walker',        'Greensboro', '3914 Walker Ave, Greensboro, NC 27403',     'Lindley Park Cottage', 'Walker Ave', 365, true),
-  ('kenview',       'Kenview',       'Greensboro', null,                                         null,                'Kenview',       365, false),
-  ('hidden-hollow', 'Hidden Hollow', 'Snowshoe',   '96 Hidden Hollow Lane, Slatyfork, WV 26291','Snowshoe Chalet',  'Hidden Hollow', 365, true),
-  ('lee-ct',        'Lee Ct',        'OBX',        '138 Lee Ct, Kill Devil Hills, NC',           'Canal Keep',       'Lee Court',     365, true);
+insert into properties (id, display_name, public_name, market, address, igms_name, baselane_name, available_nights, active, pm_commission_rate) values
+  ('village-lane',  'Village Lane',  'Village Lane',        'Greensboro', '306 Village Lane, Greensboro, NC 27409',    'Village Lane',         'Village Lane',  365, true,   0.00),
+  ('walker',        'Walker',        'Lindley Park Cottage','Greensboro', '3914 Walker Ave, Greensboro, NC 27403',      'Lindley Park Cottage', 'Walker Ave',    365, true,   0.00),
+  ('kenview',       'Kenview',       'Kenview',             'Greensboro', null,                                          null,                   'Kenview',       365, false,  0.00),
+  ('hidden-hollow', 'Hidden Hollow', 'Hidden Hollow',       'Snowshoe',   '96 Hidden Hollow Lane, Slatyfork, WV 26291', 'Snowshoe Chalet',      'Hidden Hollow', 365, true,  16.00),
+  ('lee-ct',        'Lee Ct',        'Canal Front Cottage', 'OBX',        '138 Lee Ct, Kill Devil Hills, NC',            'Canal Keep',           'Lee Court',     365, true,  16.00);
 
 -- ── Seed: Owners ──────────────────────────────────────────────
-insert into owners (id, name, email) values
-  ('00000000-0000-0000-0000-000000000001', 'Brian FitzGerald', null),
-  ('00000000-0000-0000-0000-000000000002', 'Brian Sr. FitzGerald', null);
+insert into owners (id, name, slug, email) values
+  ('00000000-0000-0000-0000-000000000001', 'Brian FitzGerald',   'brian-fitzgerald',   null),
+  ('00000000-0000-0000-0000-000000000002', 'Michael FitzGerald', 'michael-fitzgerald', null),
+  ('00000000-0000-0000-0000-000000000003', 'Moriah Angott',      'moriah-angott',      null);
 
 -- ── Seed: Property Owners ─────────────────────────────────────
 insert into property_owners (property_id, owner_id, ownership_pct) values
   ('village-lane',  '00000000-0000-0000-0000-000000000001', 100.00),
-  ('walker',        '00000000-0000-0000-0000-000000000001', 100.00),
+  ('walker',        '00000000-0000-0000-0000-000000000003', 100.00),  -- Moriah owns Walker
   ('kenview',       '00000000-0000-0000-0000-000000000001', 100.00),
   ('hidden-hollow', '00000000-0000-0000-0000-000000000001',  49.00),
   ('hidden-hollow', '00000000-0000-0000-0000-000000000002',  51.00),

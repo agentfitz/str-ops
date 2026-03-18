@@ -17,6 +17,11 @@
       "destination": "/index"
     },
     {
+      "source": "/owner-reports/(.*)",
+      "has": [{ "type": "host", "value": "ops.bmf.llc" }],
+      "destination": "/views/owner-report"
+    },
+    {
       "source": "/(.*)",
       "has": [{ "type": "host", "value": "ops.bmf.llc" }],
       "destination": "/views/$1"

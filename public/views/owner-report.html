@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Owner Report — BMF Enterprises</title>
+
+  <link rel="stylesheet" href="/css/tokens.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/nav.css">
+  <link rel="stylesheet" href="/css/report.css">
+
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body x-data="reportViewer()" x-init="init()">
+
+  <!-- Draft banner -->
+  <div class="report-draft-banner" x-show="report && report.status !== 'published'">
+    DRAFT — Not yet published
+  </div>
+
+  <!-- Loading state -->
+  <div class="report-container" x-show="loading">
+    <p class="text-muted text-sm" style="padding-top: var(--space-16);">Loading report...</p>
+  </div>
+
+  <!-- Error state -->
+  <div class="report-container" x-show="!loading && error">
+    <p style="padding-top: var(--space-16); color: var(--color-negative);" x-text="error"></p>
+  </div>
+
+  <!-- Report content -->
+  <div x-show="!loading && !error && data" x-cloak>
+
+    <!-- ── Header ─────────────────────────────────────────────── -->
+    <div class="report-container">
+      <div class="report-header">
+        <div class="report-header__left">
+          <p class="report-header__eyebrow">
+            <strong x-text="data?.owner?.name"></strong>
+            &nbsp;—&nbsp;Owner Report, <span x-text="formatMonthYear(data?.month, data?.year)"></span>
+          </p>
+          <h1 class="report-header__title" x-text="data?.property?.display_name"></h1>
+        </div>
+        <div class="report-header__right" x-show="data && data.metrics">
+          <p class="report-header__ytd-label">YTD Earnings</p>
+          <p class="report-header__ytd-amount" x-text="fmtRound(data?.metrics?.ytdGrossRevenue)"></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Payout Hero ────────────────────────────────────────── -->
+    <div class="report-container" style="padding-top: 0; padding-bottom: 0;">
+      <div class="report-payout-hero">
+        <p class="report-payout-hero__label">
+          Net Owner Payout, <span x-text="formatMonthAbbr(data?.month, data?.year)"></span>
+        </p>
+        <p class="report-payout-hero__amount" x-text="fmt(data?.metrics?.ownerShare)"></p>
+        <p class="report-payout-hero__note" x-show="data?.owner?.ownership_pct < 100">
+          <span x-text="data?.owner?.ownership_pct"></span>% ownership share
+          <template x-if="data?.metrics?.pmCommissionRate > 0">
+            <span> · after <span x-text="data?.metrics?.pmCommissionRate"></span>% management fee</span>
+          </template>
+        </p>
+        <p class="report-payout-hero__note" x-show="data?.owner?.ownership_pct === 100 && data?.metrics?.pmCommissionRate > 0">
+          After <span x-text="data?.metrics?.pmCommissionRate"></span>% management fee
+        </p>
+      </div>
+    </div>
+
+    <div class="report-container">
+
+      <!-- ── Executive Summary ──────────────────────────────── -->
+      <div class="report-section" x-show="report && report.ai_summary">
+        <p class="report-section__heading">Executive Summary</p>
+        <div class="report-summary__body" x-text="report && report.ai_summary"></div>
+      </div>
+
+      <!-- ── Occupancy Snapshot ─────────────────────────────── -->
+      <div class="report-section">
+        <p class="report-section__heading">
+          <span x-text="formatMonthYear(data?.month, data?.year)"></span> · Occupancy
+        </p>
+        <p class="report-occupancy__stat">
+          <span x-text="data?.metrics?.revenueNights"></span>
+          <span style="font-size: var(--text-xl); font-weight: 400;"> / </span>
+          <span x-text="data?.metrics?.availableNights"></span>
+          <span style="font-size: var(--text-xl); font-weight: 400; font-family: var(--font-body);"> nights</span>
+        </p>
+        <p class="report-occupancy__detail">
+          <span x-text="data?.metrics?.revenueNights"></span> revenue nights
+          <template x-if="data?.metrics?.ownerStayNights > 0">
+            <span>
+              &nbsp;·&nbsp;
+              <span x-text="data?.metrics?.ownerStayNights"></span> owner stay
+              <template x-if="data?.metrics?.ownerStayDates && data?.metrics?.ownerStayDates.length > 0">
+                <span>(<span x-text="formatOwnerStayDates(data?.metrics?.ownerStayDates)"></span>)</span>
+              </template>
+            </span>
+          </template>
+          <br>
+          <span x-text="occupancyPct(data?.metrics)"></span>% occupancy rate
+        </p>
+      </div>
+
+      <!-- ── Financials ─────────────────────────────────────── -->
+      <div class="report-section">
+        <p class="report-section__heading">
+          <span x-text="formatMonthYear(data?.month, data?.year)"></span> · Financials
+        </p>
+        <div class="report-financials">
+          <div class="report-financials__row">
+            <span>Gross Revenue</span>
+            <span class="report-financials__amount" x-text="fmt(data?.metrics?.grossRevenue)"></span>
+          </div>
+          <div class="report-financials__row" x-show="data?.metrics?.pmCommissionRate > 0">
+            <span>Management Fee (<span x-text="data?.metrics?.pmCommissionRate"></span>%)</span>
+            <span class="report-financials__amount" x-text="'−' + fmt(data?.metrics?.pmFee)"></span>
+          </div>
+          <div class="report-financials__row" x-show="data?.owner?.ownership_pct < 100">
+            <span>Property Net &times; <span x-text="data?.owner?.ownership_pct"></span>% ownership</span>
+            <span class="report-financials__amount" x-text="fmt(data?.metrics?.netPropertyPayout) + ' × ' + (data?.owner?.ownership_pct / 100)"></span>
+          </div>
+          <div class="report-financials__row report-financials__row--total">
+            <span>Net Owner Payout</span>
+            <span class="report-financials__amount" x-text="fmt(data?.metrics?.ownerShare)"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Bookings This Month ────────────────────────────── -->
+      <div class="report-section">
+        <p class="report-section__pill report-section__pill--green">Bookings This Month</p>
+        <template x-if="data?.currentBookings?.filter(r => r.stay_type === 'Revenue' || r.stay_type === 'Comp Stay').length > 0">
+          <table class="report-table">
+            <thead>
+              <tr>
+                <th>Dates</th>
+                <th>Source</th>
+                <th>Nights</th>
+                <th>Payout</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="booking in data?.currentBookings?.filter(r => r.stay_type === 'Revenue' || r.stay_type === 'Comp Stay')" :key="booking.checkin_date">
+                <tr>
+                  <td class="mono" x-text="formatDateRange(booking.checkin_date, booking.checkout_date)"></td>
+                  <td x-text="capitalizePlatform(booking.platform)"></td>
+                  <td class="mono" x-text="booking.nights"></td>
+                  <td class="mono" x-text="booking.stay_type === 'Comp Stay' ? 'Comp' : fmt(booking.expected_total_payout)"></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </template>
+        <template x-if="data?.currentBookings?.filter(r => r.stay_type === 'Revenue' || r.stay_type === 'Comp Stay').length === 0">
+          <p class="report-table__empty">No bookings this month.</p>
+        </template>
+      </div>
+
+      <!-- ── Coming Up ──────────────────────────────────────── -->
+      <div class="report-section">
+        <p class="report-section__pill report-section__pill--yellow">
+          Coming Up —
+          <span x-text="formatMonthYear(data?.month === 12 ? 1 : data?.month + 1, data?.month === 12 ? data?.year + 1 : data?.year)"></span>
+        </p>
+        <template x-if="data?.upcomingBookings?.length > 0">
+          <table class="report-table">
+            <thead>
+              <tr>
+                <th>Dates</th>
+                <th>Platform</th>
+                <th>Nights</th>
+                <th>Expected</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="booking in data?.upcomingBookings" :key="booking.checkin_date">
+                <tr>
+                  <td class="mono" x-text="formatDateRange(booking.checkin_date, booking.checkout_date)"></td>
+                  <td x-text="capitalizePlatform(booking.platform)"></td>
+                  <td class="mono" x-text="booking.nights"></td>
+                  <td class="mono" x-text="booking.stay_type === 'Comp Stay' ? 'Comp' : (booking.expected_total_payout ? fmt(booking.expected_total_payout) : 'TBD')"></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </template>
+        <template x-if="!data?.upcomingBookings?.length">
+          <p class="report-table__empty">No confirmed bookings next month yet.</p>
+        </template>
+      </div>
+
+      <!-- ── Footer ────────────────────────────────────────── -->
+      <div class="report-footer">
+        <p class="report-footer__text">
+          Questions about this report? Contact Brian at
+          <a href="mailto:brian@bmf.llc" style="color: var(--color-accent);">brian@bmf.llc</a>
+        </p>
+        <p class="report-footer__brand">BMF Enterprises · Short-Term Rental Management</p>
+      </div>
+
+    </div><!-- /report-container -->
+  </div><!-- /report content -->
+
+  <script>
+    const MONTH_NAMES = ['', 'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December']
+    const MONTH_ABBR  = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+    function parseReportParams() {
+      const parts = window.location.pathname.split('/').filter(Boolean)
+      // ['owner-reports', '03-2026', 'michael-fitzgerald', 'hidden-hollow']
+      if (parts[0] === 'owner-reports' && parts.length === 4) {
+        const [mm, yyyy] = parts[1].split('-')
+        return {
+          month:        parseInt(mm),
+          year:         parseInt(yyyy),
+          ownerSlug:    parts[2],
+          propertySlug: parts[3],
+        }
+      }
+      // Fallback: query params for local dev
+      const q = new URLSearchParams(window.location.search)
+      return {
+        month:        parseInt(q.get('month')),
+        year:         parseInt(q.get('year')),
+        ownerSlug:    q.get('owner'),
+        propertySlug: q.get('property'),
+      }
+    }
+
+    function reportViewer() {
+      return {
+        loading: true,
+        error:   '',
+        data:    null,
+        report:  null,
+
+        async init() {
+          const params = parseReportParams()
+          if (!params.month || !params.year || !params.ownerSlug || !params.propertySlug) {
+            this.error   = 'Invalid report URL.'
+            this.loading = false
+            return
+          }
+
+          try {
+            const url = `/api/owner-reports/data?property=${params.propertySlug}&owner=${params.ownerSlug}&month=${params.month}&year=${params.year}`
+            const res  = await fetch(url)
+            if (!res.ok) {
+              const err = await res.json()
+              throw new Error(err.error || 'Failed to load report')
+            }
+            const json = await res.json()
+            this.data   = json
+            this.report = json.report
+
+            if (json.property && json.owner) {
+              document.title = `${json.property.display_name} — ${MONTH_NAMES[json.month]} ${json.year} — Owner Report`
+            }
+          } catch (err) {
+            this.error = err.message
+          } finally {
+            this.loading = false
+          }
+        },
+
+        fmt(n) {
+          if (n == null) return '—'
+          return '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+        },
+
+        fmtRound(n) {
+          if (n == null) return '—'
+          return '$' + Math.round(n).toLocaleString('en-US')
+        },
+
+        formatMonthYear(month, year) {
+          if (!month || !year) return ''
+          return `${MONTH_NAMES[month]} ${year}`
+        },
+
+        formatMonthAbbr(month, year) {
+          if (!month || !year) return ''
+          return `${MONTH_ABBR[month].toUpperCase()} ${year}`
+        },
+
+        formatDateRange(checkin, checkout) {
+          if (!checkin) return ''
+          const ci = new Date(checkin + 'T00:00:00')
+          const co = checkout ? new Date(checkout + 'T00:00:00') : null
+          const f  = d => `${MONTH_ABBR[d.getMonth() + 1]} ${d.getDate()}`
+          return co ? `${f(ci)} – ${f(co)}` : f(ci)
+        },
+
+        formatOwnerStayDates(dates) {
+          if (!dates || !dates.length) return ''
+          return dates.map(d => {
+            const ci = new Date(d.checkin + 'T00:00:00')
+            return `${MONTH_ABBR[ci.getMonth() + 1]} ${ci.getDate()}`
+          }).join(', ')
+        },
+
+        capitalizePlatform(platform) {
+          if (!platform) return '—'
+          const map = { airbnb: 'Airbnb', vrbo: 'VRBO', direct: 'Direct' }
+          return map[platform.toLowerCase()] || platform
+        },
+
+        occupancyPct(metrics) {
+          if (!metrics || !metrics.availableNights) return 0
+          return Math.round((metrics.revenueNights / metrics.availableNights) * 100)
+        },
+      }
+    }
+  </script>
+
+</body>
+</html>
