@@ -55,7 +55,7 @@ Two data sources serve different purposes — never mix them for the same calcul
 - Kenview is inactive — exclude from all revenue metrics, charts, and property filters
 - Stay type `Void` is excluded from all imports entirely
 - Baselane `Transfers & Other` type rows are skipped on import
-- `source_hash` on expenses = SHA-256 of date+merchant+amount+property+description (upsert key — safe to re-run). **Added via live migration, not in original schema.sql — see Schema Notes.**
+- `source_hash` on expenses = SHA-256 of date+account+merchant+amount+description (upsert key — safe to re-run). `account` (not `property`) is used because `property` is user-editable in Baselane and would orphan rows on reassignment.
 - `reservation_code` on reservations is the upsert key — safe to re-run imports
 - BMF Enterprises portfolio-level transactions import with null `property_id`
 

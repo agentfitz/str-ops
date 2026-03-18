@@ -56,9 +56,9 @@ for (const r of records) {
   const amount = parseFloat(r['Amount']) || 0
   const source_hash = makeHash(
     dateStr,
+    r['Account'],
     r['Merchant'],
     amount,
-    r['Property'],
     r['Description']
   )
 
