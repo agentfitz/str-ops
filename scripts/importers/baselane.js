@@ -40,6 +40,9 @@ let inserted = 0
 let skipped  = 0
 let errors   = 0
 
+const BATCH_SIZE = 100
+const rows = []
+
 for (const r of records) {
   if (SKIP_TYPES.includes(r['Type'])) { skipped++; continue }
 
@@ -62,7 +65,7 @@ for (const r of records) {
     r['Description']
   )
 
-  const row = {
+  rows.push({
     source_hash,
     property_id:  propertyId,
     date:         dateStr,
@@ -74,18 +77,22 @@ for (const r of records) {
     subcategory:  r['Sub-category'],
     account:      r['Account'],
     notes:        r['Notes'] || null,
-  }
+  })
+}
 
+for (let i = 0; i < rows.length; i += BATCH_SIZE) {
+  const batch = rows.slice(i, i + BATCH_SIZE)
   const { error } = await supabase
     .from('expenses')
-    .upsert(row, { onConflict: 'source_hash' })
+    .upsert(batch, { onConflict: 'source_hash' })
 
   if (error) {
-    console.error(`Error on ${r['Description']}:`, error.message)
-    errors++
+    console.error(`Batch ${i / BATCH_SIZE + 1} error:`, error.message)
+    errors += batch.length
   } else {
-    inserted++
+    inserted += batch.length
+    process.stdout.write(`\rImporting... ${inserted} rows`)
   }
 }
 
-console.log(`Done. Inserted/updated: ${inserted} | Skipped (transfers): ${skipped} | Errors: ${errors}`)
+console.log(`\nDone. Inserted/updated: ${inserted} | Skipped (transfers): ${skipped} | Errors: ${errors}`)

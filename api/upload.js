@@ -123,7 +123,9 @@ async function importBaselane(csvBuffer) {
   })
 
   const SKIP_TYPES = ['Transfers & Other']
+  const BATCH_SIZE = 100
   let inserted = 0, skipped = 0, errors = 0
+  const rows = []
 
   for (const r of result.data) {
     if (SKIP_TYPES.includes(r['Type'])) { skipped++; continue }
@@ -135,9 +137,9 @@ async function importBaselane(csvBuffer) {
       ? parsedDate.toISOString().split('T')[0]
       : null
     const amount     = parseFloat(r['Amount']) || 0
-    const source_hash = makeHash(dateStr, r['Merchant'], amount, r['Property'], r['Description'])
+    const source_hash = makeHash(dateStr, r['Account'], r['Merchant'], amount, r['Description'])
 
-    const row = {
+    rows.push({
       source_hash,
       property_id:  propertyId,
       date:         dateStr,
@@ -149,14 +151,17 @@ async function importBaselane(csvBuffer) {
       subcategory:  r['Sub-category'],
       account:      r['Account'],
       notes:        r['Notes'] || null,
-    }
+    })
+  }
 
+  for (let i = 0; i < rows.length; i += BATCH_SIZE) {
+    const batch = rows.slice(i, i + BATCH_SIZE)
     const { error } = await supabase
       .from('expenses')
-      .upsert(row, { onConflict: 'source_hash' })
+      .upsert(batch, { onConflict: 'source_hash' })
 
-    if (error) errors++
-    else inserted++
+    if (error) errors += batch.length
+    else inserted += batch.length
   }
 
   return { inserted, skipped, errors }
