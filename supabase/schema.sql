@@ -11,9 +11,10 @@ create table properties (
   address              text,
   igms_name            text,                   -- exact string from IGMS export
   baselane_name        text,                   -- exact string from Baselane export
-  available_nights     int default 365,
-  active               boolean default true,   -- false until property goes live
-  pm_commission_rate   numeric(5,2) default 0.00, -- e.g. 16.00 = 16%
+  available_nights              int default 365,
+  active                        boolean default true,   -- false until property goes live
+  pm_commission_rate            numeric(5,2) default 0.00, -- e.g. 16.00 = 16%
+  operating_minimum_balance     numeric(10,2) default 0.00, -- reserve kept in account; payout = closing_balance - this
   created_at           timestamptz default now()
 );
 
@@ -82,6 +83,18 @@ create table expenses (
   imported_at   timestamptz default now()
 );
 
+-- ── Account Balances ──────────────────────────────────────────
+create table account_balances (
+  id               uuid primary key default gen_random_uuid(),
+  property_id      text references properties(id),
+  month            int not null,             -- 1–12
+  year             int not null,
+  closing_balance  numeric(10,2) not null,   -- month-end Baselane balance
+  notes            text,
+  created_at       timestamptz default now(),
+  unique(property_id, month, year)
+);
+
 -- ── Owner Reports ─────────────────────────────────────────────
 create table owner_reports (
   id              uuid primary key default gen_random_uuid(),
@@ -105,6 +118,7 @@ create index idx_reservations_stay_type   on reservations(stay_type);
 create index idx_expenses_property        on expenses(property_id);
 create index idx_expenses_date            on expenses(date);
 create index idx_owner_reports_property   on owner_reports(property_id, year, month);
+create index idx_account_balances_property on account_balances(property_id, year, month);
 
 -- ── Seed: Properties ──────────────────────────────────────────
 insert into properties (id, display_name, public_name, market, address, igms_name, baselane_name, available_nights, active, pm_commission_rate) values

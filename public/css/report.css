@@ -5,7 +5,7 @@
 .report-container {
   max-width: 680px;
   margin: 0 auto;
-  padding: var(--space-8) var(--space-6);
+  padding: var(--space-8) var(--space-6) var(--space-4);
 }
 
 /* ── Draft banner ────────────────────────────────────────────── */
@@ -27,7 +27,6 @@
   justify-content: space-between;
   align-items: center;
   padding-bottom: var(--space-4);
-  margin-bottom: var(--space-4);
 }
 
 .report-header__left {
@@ -49,6 +48,17 @@
   margin-bottom: var(--space-3);
 }
 
+.report-header__owner-name {
+  color: var(--color-text);
+}
+
+.report-header__title-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: var(--space-8);
+}
+
 .report-header__title {
   font-family: var(--font-display);
   font-size: var(--text-4xl);
@@ -65,10 +75,10 @@
 }
 
 .report-header__ytd-label {
-  font-family: var(--font-body);
+  font-family: var(--font-mono);
   font-size: var(--text-sm);
   font-weight: 600;
-  color: var(--color-accent);
+  color: var(--color-money-green);
   margin-bottom: var(--space-1);
 }
 
@@ -77,14 +87,59 @@
   font-size: var(--text-xl);
   font-weight: 500;
   color: var(--color-text);
+  line-height: 1;
 }
 
-/* ── Payout hero ─────────────────────────────────────────────── */
+/* ── Two-hero grid ───────────────────────────────────────────── */
+.report-heroes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+  margin-bottom: var(--space-2);
+}
+
+.report-hero-card {
+  background: #dcf3f4;
+  border-radius: var(--border-radius);
+  padding: var(--space-6) var(--space-6);
+  text-align: center;
+}
+
+.report-hero-card__label {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-accent);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: var(--space-3);
+}
+
+.report-hero-card__amount {
+  font-family: var(--font-mono);
+  font-size: var(--text-3xl);
+  font-weight: 500;
+  color: var(--color-accent);
+  line-height: 1;
+  margin-bottom: var(--space-2);
+}
+
+.report-hero-card__amount--pending {
+  font-size: var(--text-xl);
+  color: var(--color-text-muted);
+}
+
+.report-hero-card__period {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+/* ── Payout hero (legacy — kept for print fallback) ──────────── */
 .report-payout-hero {
   background: #dcf3f4;
   border-radius: var(--border-radius);
-  padding: var(--space-5) var(--space-8);
-  margin-bottom: var(--space-4);
+  padding: var(--space-8) var(--space-8);
+  margin-bottom: 0;
   text-align: center;
 }
 
@@ -113,10 +168,15 @@
 }
 
 /* ── Sections ────────────────────────────────────────────────── */
+.report-container.report-container--sections {
+  padding-top: 0;
+}
+
 .report-section {
   padding-top: var(--space-6);
   margin-top: var(--space-4);
 }
+
 
 .report-section__heading {
   font-family: var(--font-mono);
@@ -204,6 +264,20 @@
 .report-financials__row--total .report-financials__amount {
   font-size: var(--text-2xl);
   font-weight: 500;
+}
+
+.report-financials__badge {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-faint);
+  background: var(--color-surface-alt, #f0ede8);
+  border-radius: 2px;
+  padding: 1px 5px;
+  margin-left: var(--space-2);
+  vertical-align: middle;
 }
 
 /* ── Bookings table ──────────────────────────────────────────── */

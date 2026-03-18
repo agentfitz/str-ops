@@ -7,7 +7,6 @@
 
   <link rel="stylesheet" href="/css/tokens.css">
   <link rel="stylesheet" href="/css/base.css">
-  <link rel="stylesheet" href="/css/nav.css">
   <link rel="stylesheet" href="/css/report.css">
 
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
@@ -37,38 +36,45 @@
       <div class="report-header">
         <div class="report-header__left">
           <p class="report-header__eyebrow">
-            <strong x-text="data?.owner?.name"></strong>
+            <span class="report-header__owner-name" x-text="data?.owner?.name"></span>
             &nbsp;—&nbsp;Owner Report, <span x-text="formatMonthYear(data?.month, data?.year)"></span>
           </p>
-          <h1 class="report-header__title" x-text="data?.property?.display_name"></h1>
-        </div>
-        <div class="report-header__right" x-show="data && data.metrics">
-          <p class="report-header__ytd-label">YTD Earnings</p>
-          <p class="report-header__ytd-amount" x-text="fmtRound(data?.metrics?.ytdGrossRevenue)"></p>
+          <div class="report-header__title-container">
+            <h1 class="report-header__title" x-text="data?.property?.display_name"></h1>
+            <div class="report-header__right" x-show="data && data.ytd_gross_revenue > 0">
+              <p class="report-header__ytd-label">YTD Earnings</p>
+              <p class="report-header__ytd-amount" x-text="fmtRound(data?.ytd_gross_revenue)"></p>
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- ── Payout Hero ────────────────────────────────────────── -->
+    <!-- ── Two Hero Cards ─────────────────────────────────────── -->
     <div class="report-container" style="padding-top: 0; padding-bottom: 0;">
-      <div class="report-payout-hero">
-        <p class="report-payout-hero__label">
-          Net Owner Payout, <span x-text="formatMonthAbbr(data?.month, data?.year)"></span>
-        </p>
-        <p class="report-payout-hero__amount" x-text="fmt(data?.metrics?.ownerShare)"></p>
-        <p class="report-payout-hero__note" x-show="data?.owner?.ownership_pct < 100">
-          <span x-text="data?.owner?.ownership_pct"></span>% ownership share
-          <template x-if="data?.metrics?.pmCommissionRate > 0">
-            <span> · after <span x-text="data?.metrics?.pmCommissionRate"></span>% management fee</span>
+      <div class="report-heroes">
+
+        <div class="report-hero-card">
+          <p class="report-hero-card__label">Gross Revenue</p>
+          <p class="report-hero-card__amount" x-text="fmt(data?.gross_revenue)"></p>
+          <p class="report-hero-card__period" x-text="formatMonthYear(data?.month, data?.year)"></p>
+        </div>
+
+        <div class="report-hero-card">
+          <p class="report-hero-card__label">Owner Payout</p>
+          <template x-if="data?.account_balance?.has_balance">
+            <p class="report-hero-card__amount" x-text="fmt(data?.account_balance?.owner_payout)"></p>
           </template>
-        </p>
-        <p class="report-payout-hero__note" x-show="data?.owner?.ownership_pct === 100 && data?.metrics?.pmCommissionRate > 0">
-          After <span x-text="data?.metrics?.pmCommissionRate"></span>% management fee
-        </p>
+          <template x-if="!data?.account_balance?.has_balance">
+            <p class="report-hero-card__amount report-hero-card__amount--pending">Pending</p>
+          </template>
+          <p class="report-hero-card__period" x-text="formatMonthYear(data?.month, data?.year)"></p>
+        </div>
+
       </div>
     </div>
 
-    <div class="report-container">
+    <div class="report-container report-container--sections">
 
       <!-- ── Executive Summary ──────────────────────────────── -->
       <div class="report-section" x-show="report && report.ai_summary">
@@ -76,30 +82,30 @@
         <div class="report-summary__body" x-text="report && report.ai_summary"></div>
       </div>
 
-      <!-- ── Occupancy Snapshot ─────────────────────────────── -->
+      <!-- ── Occupancy ──────────────────────────────────────── -->
       <div class="report-section">
         <p class="report-section__heading">
           <span x-text="formatMonthYear(data?.month, data?.year)"></span> · Occupancy
         </p>
         <p class="report-occupancy__stat">
-          <span x-text="data?.metrics?.revenueNights"></span>
+          <span x-text="data?.occupancy?.revenue_nights"></span>
           <span style="font-size: var(--text-xl); font-weight: 400;"> / </span>
-          <span x-text="data?.metrics?.availableNights"></span>
+          <span x-text="data?.occupancy?.available_nights"></span>
           <span style="font-size: var(--text-xl); font-weight: 400; font-family: var(--font-body);"> nights</span>
         </p>
         <p class="report-occupancy__detail">
-          <span x-text="data?.metrics?.revenueNights"></span> revenue nights
-          <template x-if="data?.metrics?.ownerStayNights > 0">
+          <span x-text="data?.occupancy?.revenue_nights"></span> revenue nights
+          <template x-if="data?.occupancy?.owner_stay_nights > 0">
             <span>
               &nbsp;·&nbsp;
-              <span x-text="data?.metrics?.ownerStayNights"></span> owner stay
-              <template x-if="data?.metrics?.ownerStayDates && data?.metrics?.ownerStayDates.length > 0">
-                <span>(<span x-text="formatOwnerStayDates(data?.metrics?.ownerStayDates)"></span>)</span>
+              <span x-text="data?.occupancy?.owner_stay_nights"></span> owner stay
+              <template x-if="data?.occupancy?.owner_stay_dates && data?.occupancy?.owner_stay_dates.length > 0">
+                <span>(<span x-text="formatOwnerStayDates(data?.occupancy?.owner_stay_dates)"></span>)</span>
               </template>
             </span>
           </template>
           <br>
-          <span x-text="occupancyPct(data?.metrics)"></span>% occupancy rate
+          <span x-text="Math.round((data?.occupancy?.pct || 0) * 100)"></span>% occupancy rate
         </p>
       </div>
 
@@ -109,23 +115,91 @@
           <span x-text="formatMonthYear(data?.month, data?.year)"></span> · Financials
         </p>
         <div class="report-financials">
+
+          <!-- Gross Revenue -->
           <div class="report-financials__row">
             <span>Gross Revenue</span>
-            <span class="report-financials__amount" x-text="fmt(data?.metrics?.grossRevenue)"></span>
+            <span class="report-financials__amount" x-text="fmt(data?.gross_revenue)"></span>
           </div>
-          <div class="report-financials__row" x-show="data?.metrics?.pmCommissionRate > 0">
-            <span>Management Fee (<span x-text="data?.metrics?.pmCommissionRate"></span>%)</span>
-            <span class="report-financials__amount" x-text="'−' + fmt(data?.metrics?.pmFee)"></span>
+
+          <!-- Management Fee (only if rate > 0) -->
+          <div class="report-financials__row" x-show="data?.management_fee?.rate > 0">
+            <span>
+              Management Fee (<span x-text="data?.management_fee?.rate"></span>%)
+              <span class="report-financials__badge" x-show="data?.management_fee?.estimated">est.</span>
+            </span>
+            <span class="report-financials__amount" x-text="fmtNeg(data?.management_fee?.amount)"></span>
           </div>
-          <div class="report-financials__row" x-show="data?.owner?.ownership_pct < 100">
-            <span>Property Net &times; <span x-text="data?.owner?.ownership_pct"></span>% ownership</span>
-            <span class="report-financials__amount" x-text="fmt(data?.metrics?.netPropertyPayout) + ' × ' + (data?.owner?.ownership_pct / 100)"></span>
-          </div>
+
+          <!-- Dynamic expense categories -->
+          <template x-for="expense in (data?.expenses || [])" :key="expense.category">
+            <div class="report-financials__row">
+              <span x-text="expense.category"></span>
+              <span class="report-financials__amount" x-text="fmtNeg(expense.amount)"></span>
+            </div>
+          </template>
+
+          <!-- Net Cash Flow -->
           <div class="report-financials__row report-financials__row--total">
-            <span>Net Owner Payout</span>
-            <span class="report-financials__amount" x-text="fmt(data?.metrics?.ownerShare)"></span>
+            <span>Net Cash Flow</span>
+            <span class="report-financials__amount" x-text="fmt(data?.net_cash_flow)"></span>
           </div>
         </div>
+      </div>
+
+      <!-- ── Owner Payout ───────────────────────────────────── -->
+      <div class="report-section">
+        <p class="report-section__heading">
+          <span x-text="formatMonthYear(data?.month, data?.year)"></span> · Owner Payout
+        </p>
+
+        <!-- No balance entered yet -->
+        <template x-if="!data?.account_balance?.has_balance">
+          <p style="font-family: var(--font-body); font-size: var(--text-sm); color: var(--color-text-faint); font-style: italic;">
+            Account balance not yet entered for this month.
+          </p>
+        </template>
+
+        <!-- Balance present -->
+        <template x-if="data?.account_balance?.has_balance">
+          <div>
+            <div class="report-financials">
+              <div class="report-financials__row">
+                <span>Closing Account Balance</span>
+                <span class="report-financials__amount" x-text="fmt(data?.account_balance?.closing_balance)"></span>
+              </div>
+              <div class="report-financials__row">
+                <span>Operating Minimum Reserve</span>
+                <span class="report-financials__amount" x-text="fmtNeg(data?.account_balance?.operating_minimum)"></span>
+              </div>
+
+              <!-- Split ownership proration -->
+              <div class="report-financials__row" x-show="data?.owner?.ownership_pct < 100">
+                <span>Property Payout Pool &times; <span x-text="data?.owner?.ownership_pct"></span>% ownership</span>
+                <span class="report-financials__amount" x-text="fmt(data?.account_balance?.property_payout)"></span>
+              </div>
+
+              <div class="report-financials__row report-financials__row--total">
+                <span>Owner Payout</span>
+                <span class="report-financials__amount" x-text="fmt(data?.account_balance?.owner_payout)"></span>
+              </div>
+            </div>
+
+            <!-- Zero payout explanation -->
+            <div x-show="data?.account_balance?.owner_payout === 0" style="
+              margin-top: var(--space-4);
+              background: var(--color-warning-bg);
+              border-radius: var(--border-radius);
+              padding: var(--space-4);
+            ">
+              <p style="font-family: var(--font-body); font-size: var(--text-sm); color: var(--color-warning);">
+                The account balance of <strong x-text="fmt(data?.account_balance?.closing_balance)"></strong>
+                is below the <strong x-text="fmt(data?.account_balance?.operating_minimum)"></strong> operating minimum.
+                No distribution this month.
+              </p>
+            </div>
+          </div>
+        </template>
       </div>
 
       <!-- ── Bookings This Month ────────────────────────────── -->
@@ -200,7 +274,7 @@
         <p class="report-footer__brand">BMF Enterprises · Short-Term Rental Management</p>
       </div>
 
-    </div><!-- /report-container -->
+    </div><!-- /report-container--sections -->
   </div><!-- /report content -->
 
   <script>
@@ -214,14 +288,8 @@
       // ['owner-reports', '03-2026', 'michael-fitzgerald', 'hidden-hollow']
       if (parts[0] === 'owner-reports' && parts.length === 4) {
         const [mm, yyyy] = parts[1].split('-')
-        return {
-          month:        parseInt(mm),
-          year:         parseInt(yyyy),
-          ownerSlug:    parts[2],
-          propertySlug: parts[3],
-        }
+        return { month: parseInt(mm), year: parseInt(yyyy), ownerSlug: parts[2], propertySlug: parts[3] }
       }
-      // Fallback: query params for local dev
       const q = new URLSearchParams(window.location.search)
       return {
         month:        parseInt(q.get('month')),
@@ -247,7 +315,7 @@
           }
 
           try {
-            const url = `/api/owner-reports/data?property=${params.propertySlug}&owner=${params.ownerSlug}&month=${params.month}&year=${params.year}`
+            const url = `/api/reports/summary?property=${params.propertySlug}&owner=${params.ownerSlug}&month=${params.month}&year=${params.year}`
             const res  = await fetch(url)
             if (!res.ok) {
               const err = await res.json()
@@ -275,6 +343,14 @@
         fmtRound(n) {
           if (n == null) return '—'
           return '$' + Math.round(n).toLocaleString('en-US')
+        },
+
+        // Format a value that is already negative — display with parentheses or minus
+        fmtNeg(n) {
+          if (n == null) return '—'
+          const abs = Math.abs(n)
+          const str = '$' + abs.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+          return n < 0 ? `(${str})` : str
         },
 
         formatMonthYear(month, year) {
@@ -307,11 +383,6 @@
           if (!platform) return '—'
           const map = { airbnb: 'Airbnb', vrbo: 'VRBO', direct: 'Direct' }
           return map[platform.toLowerCase()] || platform
-        },
-
-        occupancyPct(metrics) {
-          if (!metrics || !metrics.availableNights) return 0
-          return Math.round((metrics.revenueNights / metrics.availableNights) * 100)
         },
       }
     }

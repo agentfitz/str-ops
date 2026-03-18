@@ -32,6 +32,23 @@
 - **Metrics** tracked: Gross Revenue, Occupancy %, ADR (avg daily rate), RevPAR (revenue per available night), total bookings, owner nights
 - **Owner Reports** — monthly reports per property/owner with an AI-generated summary (Claude API) and optional manual notes from the host
 
+## Revenue Source of Truth (Owner Reports)
+
+Two data sources serve different purposes — never mix them for the same calculation:
+
+| Purpose | Source | Table |
+|---|---|---|
+| Dollar amounts (revenue, expenses, net cash flow, owner payout) | Baselane | `expenses` |
+| Bookings, nights, occupancy, guest details | IGMS | `reservations` |
+
+**Gross Revenue** = `SUM(amount)` from `expenses` where `type = 'Revenue'` AND `category = 'Rents'` for the month. This captures Airbnb, VRBO, Stripe, and any off-platform payments that bypass IGMS.
+
+**Why not IGMS?** Direct bookings via Stripe and off-platform extensions appear in Baselane but not in IGMS (or with understated payouts). Example: Walker Ave guest extended off-platform — $500.74 hit Baselane but IGMS understated the reservation payout.
+
+**YTD Gross Revenue** — same logic, Jan 1 through end of report month, from `expenses`.
+
+**Occupancy** — keep using `reservations` table. Revenue nights are accurate in IGMS even when payout is understated.
+
 ## Business Rules
 - Occupancy = revenue nights / available nights (365 per property, hardcoded for now — `available_nights` column exists in schema for future use)
 - Owner Revenue = Gross Revenue minus PM commission (no standard rate currently defined)
@@ -43,20 +60,21 @@
 - BMF Enterprises portfolio-level transactions import with null `property_id`
 
 ## Schema Notes
-The following columns were added via live migrations and are now reflected in `supabase/schema.sql`:
+`supabase/schema.sql` is the canonical schema and seed state. The following were added via live migrations and are now reflected in schema.sql:
 
 - `properties.public_name` (text) — guest-facing name for book-direct pages
 - `properties.pm_commission_rate` (numeric 5,2) — PM commission rate per property (e.g. 16.00 = 16%)
+- `properties.operating_minimum_balance` (numeric 10,2) — reserve kept in Baselane account; payout = closing_balance − this
 - `expenses.source_hash` (text, unique) — SHA-256 upsert key for Baselane imports
 - `owners.slug` (text) — URL-safe identifier used in report URLs
+- `account_balances` table — month-end closing balance per property/month/year; unique on (property_id, month, year)
 
-Seed data corrections applied:
-- Owner `00000000-0000-0000-0000-000000000002` corrected from "Brian Sr. FitzGerald" → **Michael FitzGerald** with slug `michael-fitzgerald`
-- Brian FitzGerald slug: `brian-fitzgerald`
-- Added Moriah Angott (`00000000-0000-0000-0000-000000000003`, slug `moriah-angott`)
-- Walker ownership corrected: Brian → **Moriah Angott** (100%)
-
-These are all reflected in `supabase/schema.sql` — it is now the canonical seed state. Run the Phase 1 SQL from the owner reports plan in Supabase if the live DB hasn't been migrated yet.
+Seed data (correct state):
+- Brian FitzGerald (`00000000-...0001`, slug `brian-fitzgerald`)
+- Michael FitzGerald (`00000000-...0002`, slug `michael-fitzgerald`) — was "Brian Sr." in early seed
+- Moriah Angott (`00000000-...0003`, slug `moriah-angott`)
+- Walker ownership: Moriah 100% (not Brian)
+- Hidden Hollow: Brian 49%, Michael 51%
 
 ## Tech Stack
 - **Backend**: Node.js (ESM), no framework — `server.js` serves static files and API routes locally
@@ -88,9 +106,11 @@ api/                        # API route handlers (Vercel serverless pattern)
   properties.js             # GET /api/properties
   owners.js                 # GET /api/owners?property= (optional filter)
   upload.js                 # POST /api/upload (CSV import)
+  account-balances.js       # POST /api/account-balances (upsert month-end closing balance)
+  reports/
+    summary.js              # GET /api/reports/summary?property=&owner=&month=&year= (consolidated report data)
   owner-reports/
     index.js                # GET /api/owner-reports (list all with status)
-    data.js                 # GET /api/owner-reports/data?property=&owner=&month=&year=
     generate.js             # POST /api/owner-reports/generate
     save.js                 # PUT /api/owner-reports/save
     publish.js              # POST /api/owner-reports/publish
@@ -111,7 +131,7 @@ public/
     financials.html         # Stub — not yet functional
     reports.html            # Functional — owner report generation + admin
     owner-report.html       # Owner report viewer (single template, parses URL path)
-    admin.html              # Functional — CSV upload UI
+    admin.html              # Functional — CSV upload + account balance entry
   book-direct/              # Guest-facing direct booking landing pages
     index.html              # Property selector (stay.bmf.llc root)
     canal-front-cottage.html
@@ -134,7 +154,7 @@ scripts/
     igms.js                 # CLI: npm run import:igms path/to/file.csv
     baselane.js             # CLI: npm run import:baselane path/to/file.csv
 supabase/
-  schema.sql                # DB schema — NOTE: out of sync with live DB, see Schema Notes
+  schema.sql                # DB schema — canonical, kept in sync with live DB
 server.js                   # Local dev server
 vercel.json                 # Vercel deployment config
 ```
@@ -241,21 +261,27 @@ Monthly per-property, per-owner reports showing performance and payout. Delivere
 e.g. `ops.bmf.llc/owner-reports/03-2026/michael-fitzgerald/hidden-hollow`
 
 ### Report layout (v1)
-1. **Header** — property name, owner name, month/year, BMF branding
-2. **Net Payout hero** — big prominent number, `gross revenue − PM commission fee`
-3. **Executive Summary** — AI-generated (Claude API), positive tone, optional light "opportunities" note at end. Editable before publishing.
-4. **Occupancy Snapshot** — "X of Y nights occupied · Z revenue nights · N owner stay nights (dates)"
-5. **Financials** — 3-line: Gross Revenue → Management Fee (X%) → Net Owner Payout
-6. **Bookings This Month** — table: dates, platform, nights, payout. No guest names.
-7. **Coming Up** — next month's confirmed bookings: dates, nights, platform. No $ amounts.
-8. **Footer** — contact Brian / BMF branding
-
-**Expenses: excluded from v1.** No Baselane API yet; adds manual friction. Revisit when API available.
+1. **Header** — property name, owner name, month/year + YTD gross revenue
+2. **Two hero cards** — Gross Revenue (left) + Owner Payout (right, "Pending" if no balance entered yet)
+3. **Executive Summary** — AI-generated (Claude API), only shown if `ai_summary` exists. Editable before publishing.
+4. **Occupancy Snapshot** — "X of Y nights · % rate · owner stay nights + dates"
+5. **Financials waterfall** — Gross Revenue → Management Fee (est. badge if estimated) → dynamic expense categories → Net Cash Flow total
+6. **Owner Payout section** — Closing Balance − Operating Minimum → Owner Payout. Shows proration row for split ownership. Warning if payout = 0.
+7. **Bookings This Month** — table: dates, platform, nights, payout. Comp stays show "Comp".
+8. **Coming Up** — next month's bookings: dates, nights, platform, expected payout.
+9. **Footer** — contact Brian / BMF branding
 
 ### Payout calculation
-- Net Owner Payout = Gross Revenue − PM Commission Fee
-- For split-ownership properties, payout is prorated by `ownership_pct`
-- e.g. Hidden Hollow: Brian gets 49% of net, Michael gets 51% of net
+- Owner Payout = (`closing_balance` − `operating_minimum_balance`) × (`ownership_pct` / 100)
+- `closing_balance` entered manually in Admin → Account Balance
+- `operating_minimum_balance` stored on `properties` table
+- If `closing_balance ≤ operating_minimum_balance`, payout = $0
+- For split-ownership: each owner's payout is prorated by their `ownership_pct`
+
+### Net Cash Flow calculation
+- Net Cash Flow = Gross Revenue + Management Fee amount + sum of all expenses
+- Management Fee: actual Baselane line item if present; else estimated as `grossRevenue × (pmCommissionRate / 100)` (shown with "est." badge)
+- Expense amounts from Baselane are negative numbers; Management Fee stored as negative
 
 ### PM Commission rates (per property)
 Stored in `properties.pm_commission_rate` (numeric, e.g. 16.00 = 16%).
@@ -281,11 +307,12 @@ Stored in `properties.pm_commission_rate` (numeric, e.g. 16.00 = 16%).
 4. Brian reviews, edits AI summary if needed → Publishes
 5. Published report accessible at static URL
 
-### Data model additions needed
-- `properties.pm_commission_rate` (numeric) — add via migration
-- `owners` table: add Moriah Angott (sole owner of Walker, 0% commission)
-- Fix Walker ownership: currently seeded as 100% Brian — should be 100% Moriah
-- `owner_reports` table already exists with correct structure
+### Data model
+- `properties.pm_commission_rate` — PM commission rate, e.g. 16.00 = 16%
+- `properties.operating_minimum_balance` — reserve kept in account; payout = closing_balance - this
+- `account_balances` table — month-end closing balance per property (entered via Admin page)
+- `owner_reports` table — draft/published state, ai_summary, manual_notes
+- `expenses` table — Baselane import; used for financials waterfall
 
 ---
 
@@ -294,5 +321,5 @@ Stored in `properties.pm_commission_rate` (numeric, e.g. 16.00 = 16%).
 - [ ] Whether there are plans to expand the property portfolio
 - [ ] Seasonal pricing strategy or yield management goals
 - [ ] IGMS API access status (applied for, pending response) — critical path for live data sync
-- [ ] Expenses in owner reports — revisit when Baselane API is available
+- [x] Expenses in owner reports — implemented via Baselane CSV import + expenses table
 - [ ] Brian's ownership % on Kenview (he and Moriah live there — relevant when it goes active)

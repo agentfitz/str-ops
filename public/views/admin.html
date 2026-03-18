@@ -66,6 +66,66 @@
         <div class="upload-result upload-result--error" x-show="error" x-text="error"></div>
       </div>
 
+      <!-- Account Balance Entry -->
+      <div class="card" style="margin-bottom: var(--space-6);" x-data="accountBalance()">
+        <h4 style="margin-bottom: var(--space-2);">Account Balance</h4>
+        <p class="text-sm text-muted" style="margin-bottom: var(--space-5);">
+          Enter the month-end closing balance from Baselane for each property. Used to calculate owner payouts.
+        </p>
+
+        <div style="display: flex; flex-direction: column; gap: var(--space-4);">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4);">
+            <div>
+              <label class="form-label">Property</label>
+              <select class="form-input" x-model="property_id">
+                <option value="">Select property…</option>
+                <option value="village-lane">Village Lane</option>
+                <option value="walker">Walker</option>
+                <option value="hidden-hollow">Hidden Hollow</option>
+                <option value="lee-ct">Lee Ct</option>
+              </select>
+            </div>
+            <div>
+              <label class="form-label">Closing Balance ($)</label>
+              <input type="number" step="0.01" class="form-input" placeholder="e.g. 4250.00" x-model="closing_balance">
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4);">
+            <div>
+              <label class="form-label">Month</label>
+              <select class="form-input" x-model="month">
+                <option value="">Month…</option>
+                <template x-for="m in months" :key="m.value">
+                  <option :value="m.value" x-text="m.label"></option>
+                </template>
+              </select>
+            </div>
+            <div>
+              <label class="form-label">Year</label>
+              <select class="form-input" x-model="year">
+                <option value="">Year…</option>
+                <template x-for="y in years" :key="y">
+                  <option :value="y" x-text="y"></option>
+                </template>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label class="form-label">Notes (optional)</label>
+            <input type="text" class="form-input" placeholder="e.g. Includes deposit holdback" x-model="notes">
+          </div>
+        </div>
+
+        <div style="margin-top: var(--space-4);">
+          <button class="btn btn--primary" @click="save()" :disabled="saving || !property_id || !month || !year || closing_balance === ''">
+            <span x-text="saving ? 'Saving...' : 'Save Balance'"></span>
+          </button>
+        </div>
+
+        <div class="upload-result upload-result--success" x-show="result && !error" x-text="result"></div>
+        <div class="upload-result upload-result--error" x-show="error" x-text="error"></div>
+      </div>
+
       <!-- Baselane Upload -->
       <div class="card" x-data="uploader('baselane')">
         <h4 style="margin-bottom: var(--space-2);">Baselane Transactions</h4>
@@ -100,6 +160,55 @@
   </main>
 
   <script>
+    function accountBalance() {
+      const now = new Date()
+      return {
+        property_id:     '',
+        month:           String(now.getMonth() + 1),
+        year:            String(now.getFullYear()),
+        closing_balance: '',
+        notes:           '',
+        saving:          false,
+        result:          '',
+        error:           '',
+        months: [
+          { value: '1', label: 'January' }, { value: '2', label: 'February' },
+          { value: '3', label: 'March' },   { value: '4', label: 'April' },
+          { value: '5', label: 'May' },     { value: '6', label: 'June' },
+          { value: '7', label: 'July' },    { value: '8', label: 'August' },
+          { value: '9', label: 'September'},{ value: '10', label: 'October' },
+          { value: '11', label: 'November'},{ value: '12', label: 'December' },
+        ],
+        years: [now.getFullYear() - 1, now.getFullYear(), now.getFullYear() + 1].map(String),
+
+        async save() {
+          this.saving = true
+          this.result = ''
+          this.error  = ''
+          try {
+            const res = await fetch('/api/account-balances', {
+              method:  'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                property_id:     this.property_id,
+                month:           parseInt(this.month),
+                year:            parseInt(this.year),
+                closing_balance: parseFloat(this.closing_balance),
+                notes:           this.notes || null,
+              }),
+            })
+            const data = await res.json()
+            if (!res.ok) throw new Error(data.error || 'Save failed')
+            this.result = `✓ Balance saved — ${this.property_id}, ${this.month}/${this.year}: $${parseFloat(this.closing_balance).toLocaleString()}`
+          } catch (err) {
+            this.error = err.message
+          } finally {
+            this.saving = false
+          }
+        },
+      }
+    }
+
     function uploader(type) {
       return {
         type,
