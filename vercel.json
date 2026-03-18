@@ -1,5 +1,8 @@
 {
   "cleanUrls": true,
+  "functions": {
+    "api/upload.js": { "maxDuration": 300 }
+  },
   "rewrites": [
     {
       "source": "/",
