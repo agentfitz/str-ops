@@ -14,7 +14,7 @@ export default function handler(req, res) {
   const params = new URLSearchParams({
     client_id:    IGMS_CLIENT_ID,
     redirect_uri: IGMS_REDIRECT_URI,
-    scope:        'listings',
+    scope:        'messaging',
   })
 
   return res.redirect(`https://igms.com/app/auth.html?${params}`)
