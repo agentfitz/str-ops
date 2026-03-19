@@ -36,7 +36,27 @@
         <h1>Data Import</h1>
       </div>
 
-      <!-- IGMS Upload -->
+      <!-- IGMS Live Sync -->
+      <div class="card" style="margin-bottom: var(--space-6);" x-data="igmsSync()">
+        <h4 style="margin-bottom: var(--space-2);">IGMS — Live Sync</h4>
+        <p class="text-sm text-muted" style="margin-bottom: var(--space-5);">
+          Pull reservations directly from IGMS API. Replaces the manual CSV export — safe to run anytime, duplicates handled automatically.
+        </p>
+
+        <div style="display: flex; gap: var(--space-3); flex-wrap: wrap;">
+          <button class="btn btn--primary" @click="sync()" :disabled="syncing">
+            <span x-text="syncing ? 'Syncing...' : 'Sync Reservations'"></span>
+          </button>
+          <a href="/api/igms/connect" class="btn btn--ghost" style="font-size: var(--text-sm);">
+            Reconnect IGMS →
+          </a>
+        </div>
+
+        <div class="upload-result upload-result--success" x-show="result && !error" x-text="result"></div>
+        <div class="upload-result upload-result--error"   x-show="error"            x-text="error"></div>
+      </div>
+
+      <!-- IGMS CSV Upload (fallback) -->
       <div class="card" style="margin-bottom: var(--space-6);" x-data="uploader('igms')">
         <h4 style="margin-bottom: var(--space-2);">IGMS Reservations</h4>
         <p class="text-sm text-muted" style="margin-bottom: var(--space-5);">
@@ -171,6 +191,30 @@
   </main>
 
   <script>
+    function igmsSync() {
+      return {
+        syncing: false,
+        result:  '',
+        error:   '',
+
+        async sync() {
+          this.syncing = true
+          this.result  = ''
+          this.error   = ''
+          try {
+            const res  = await fetch('/api/igms/sync', { method: 'POST' })
+            const data = await res.json()
+            if (!res.ok) throw new Error(data.error || 'Sync failed')
+            this.result = `✓ ${data.inserted} reservations synced, ${data.skipped} skipped, ${data.errors} errors (${data.total_fetched} fetched from IGMS, ${data.listings_mapped} properties mapped)`
+          } catch (err) {
+            this.error = err.message
+          } finally {
+            this.syncing = false
+          }
+        },
+      }
+    }
+
     function accountBalance() {
       const now = new Date()
       return {
