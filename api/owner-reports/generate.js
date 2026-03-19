@@ -9,7 +9,7 @@ import { generateSummary } from '../../lib/services/aiSummary.js'
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()
 
-  const { property_id, owner_id, month, year, overwrite } = req.body
+  const { property_id, owner_id, month, year, overwrite, host_context } = req.body
 
   if (!property_id || !owner_id || !month || !year) {
     return res.status(400).json({ error: 'property_id, owner_id, month, and year are required' })
@@ -48,7 +48,7 @@ export default async function handler(req, res) {
   let aiSummary = ''
   let aiWarning = null
   try {
-    aiSummary = await generateSummary(reportData)
+    aiSummary = await generateSummary(reportData, host_context || '')
   } catch (err) {
     aiWarning = err.message
     console.error('AI summary generation failed:', err.message)

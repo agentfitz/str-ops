@@ -89,6 +89,20 @@
             </div>
           </div>
 
+          <!-- Optional context for AI -->
+          <div class="form-group">
+            <label class="form-label">
+              Context for AI <span class="text-faint text-sm">(optional)</span>
+            </label>
+            <textarea
+              class="form-textarea"
+              rows="3"
+              x-model="form.host_context"
+              placeholder="Add any color for the AI — e.g. 'we had a slow start to the month due to weather but recovered well' or 'this was Rei's first full month'. Claude will use this when crafting the summary."
+              style="font-size: var(--text-sm);"
+            ></textarea>
+          </div>
+
           <div>
             <button class="btn btn--primary" @click="generate()" :disabled="!canGenerate || generating">
               <span x-text="generating ? 'Generating...' : 'Generate Report'"></span>
@@ -278,10 +292,11 @@
       return {
         // Form state
         form: {
-          property_id: '',
-          owner_id:    '',
-          month:       new Date().getMonth() || 12, // default to last month
-          year:        new Date().getMonth() === 0 ? new Date().getFullYear() - 1 : new Date().getFullYear(),
+          property_id:  '',
+          owner_id:     '',
+          month:        new Date().getMonth() || 12, // default to last month
+          year:         new Date().getMonth() === 0 ? new Date().getFullYear() - 1 : new Date().getFullYear(),
+          host_context: '',
         },
 
         // Data
@@ -358,11 +373,12 @@
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
-                property_id: this.form.property_id,
-                owner_id:    this.form.owner_id,
-                month:       parseInt(this.form.month),
-                year:        parseInt(this.form.year),
-                overwrite:   overwrite || undefined,
+                property_id:  this.form.property_id,
+                owner_id:     this.form.owner_id,
+                month:        parseInt(this.form.month),
+                year:         parseInt(this.form.year),
+                overwrite:    overwrite || undefined,
+                host_context: this.form.host_context || undefined,
               }),
             })
 
