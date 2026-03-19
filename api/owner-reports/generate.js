@@ -9,7 +9,7 @@ import { generateSummary } from '../../lib/services/aiSummary.js'
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()
 
-  const { property_id, owner_id, month, year, overwrite, host_context } = req.body
+  const { property_id, owner_id, month, year, overwrite, host_context, regenerate_summary } = req.body
 
   if (!property_id || !owner_id || !month || !year) {
     return res.status(400).json({ error: 'property_id, owner_id, month, and year are required' })
@@ -21,7 +21,7 @@ export default async function handler(req, res) {
   // Check for existing report
   const { data: existing } = await supabase
     .from('owner_reports')
-    .select('id, status, generated_at')
+    .select('id, status, generated_at, ai_summary')
     .eq('property_id', property_id)
     .eq('owner_id', owner_id)
     .eq('month', m)
@@ -45,13 +45,21 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: `Data generation failed: ${err.message}` })
   }
 
-  let aiSummary = ''
+  // If overwriting and user didn't request a new summary, preserve the existing one
+  let preservedSummary = null
+  if (overwrite && !regenerate_summary && existing) {
+    preservedSummary = existing.ai_summary || null
+  }
+
+  let aiSummary = preservedSummary || ''
   let aiWarning = null
-  try {
-    aiSummary = await generateSummary(reportData, host_context || '')
-  } catch (err) {
-    aiWarning = err.message
-    console.error('AI summary generation failed:', err.message)
+  if (!preservedSummary) {
+    try {
+      aiSummary = await generateSummary(reportData, host_context || '')
+    } catch (err) {
+      aiWarning = err.message
+      console.error('AI summary generation failed:', err.message)
+    }
   }
 
   const now = new Date().toISOString()

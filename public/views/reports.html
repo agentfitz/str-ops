@@ -119,12 +119,16 @@
           border-radius: var(--border-radius);
           padding: var(--space-4) var(--space-5);
         ">
-          <p style="font-size: var(--text-sm); color: var(--color-warning); margin-bottom: var(--space-3);">
+          <p style="font-size: var(--text-sm); color: var(--color-warning); margin-bottom: var(--space-4);">
             A report already exists for this property, owner, and month.
           </p>
+          <label style="display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-4); cursor: pointer;">
+            <input type="checkbox" x-model="form.regenerate_summary">
+            <span style="font-size: var(--text-sm); color: var(--color-text-muted);">Generate a new AI executive summary</span>
+          </label>
           <div style="display: flex; gap: var(--space-3);">
             <button class="btn btn--secondary" style="font-size: var(--text-sm);" @click="generate(true)">
-              Overwrite &amp; Regenerate
+              Overwrite
             </button>
             <button class="btn btn--ghost" style="font-size: var(--text-sm);" @click="conflict = false">
               Cancel
@@ -296,7 +300,8 @@
           owner_id:     '',
           month:        new Date().getMonth() || 12, // default to last month
           year:         new Date().getMonth() === 0 ? new Date().getFullYear() - 1 : new Date().getFullYear(),
-          host_context: '',
+          host_context:        '',
+          regenerate_summary:  false,
         },
 
         // Data
@@ -362,9 +367,10 @@
 
         async generate(overwrite = false) {
           if (!this.canGenerate) return
-          this.conflict      = false
-          this.generateError = ''
-          this.aiWarning     = ''
+          this.conflict             = false
+          this.generateError        = ''
+          this.aiWarning            = ''
+          this.form.regenerate_summary = false
           this.generating    = true
           this.draftReport   = null
 
@@ -378,7 +384,8 @@
                 month:        parseInt(this.form.month),
                 year:         parseInt(this.form.year),
                 overwrite:    overwrite || undefined,
-                host_context: this.form.host_context || undefined,
+                host_context:       this.form.host_context || undefined,
+                regenerate_summary: this.form.regenerate_summary || undefined,
               }),
             })
 
