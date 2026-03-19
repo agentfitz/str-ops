@@ -36,18 +36,30 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: err.message })
   }
 
-  // Fetch saved report row (ai_summary, status, published_at, etc.)
+  // Fetch saved report row (ai_summary, status, featured_review_id, etc.)
   const { data: savedReport } = await supabase
     .from('owner_reports')
-    .select('id, status, ai_summary, manual_notes, generated_at, published_at')
+    .select('id, status, ai_summary, manual_notes, generated_at, published_at, featured_review_id')
     .eq('property_id', property)
     .eq('owner_id', ownerRow.id)
     .eq('month', parseInt(month))
     .eq('year', parseInt(year))
     .maybeSingle()
 
+  // Fetch the stamped review if one is stored
+  let featuredReview = null
+  if (savedReport?.featured_review_id) {
+    const { data: reviewRow } = await supabase
+      .from('reviews')
+      .select('id, guest_name, guest_location, review_text, platform, review_date')
+      .eq('id', savedReport.featured_review_id)
+      .maybeSingle()
+    featuredReview = reviewRow || null
+  }
+
   return res.status(200).json({
     ...reportData,
-    report: savedReport || null,
+    report:          savedReport || null,
+    featured_review: featuredReview,
   })
 }

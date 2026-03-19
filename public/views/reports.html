@@ -74,9 +74,18 @@
               <label class="form-label">Month</label>
               <select class="form-select" x-model="form.month">
                 <option value="">Month</option>
-                <template x-for="m in months" :key="m.value">
-                  <option :value="m.value" x-text="m.label"></option>
-                </template>
+                <option value="1">January</option>
+                <option value="2">February</option>
+                <option value="3">March</option>
+                <option value="4">April</option>
+                <option value="5">May</option>
+                <option value="6">June</option>
+                <option value="7">July</option>
+                <option value="8">August</option>
+                <option value="9">September</option>
+                <option value="10">October</option>
+                <option value="11">November</option>
+                <option value="12">December</option>
               </select>
             </div>
             <div class="form-group" style="flex: 1;">
@@ -298,8 +307,8 @@
         form: {
           property_id:  '',
           owner_id:     '',
-          month:        new Date().getMonth() || 12, // default to last month
-          year:         new Date().getMonth() === 0 ? new Date().getFullYear() - 1 : new Date().getFullYear(),
+          month:        '',
+          year:         '',
           host_context:        '',
           regenerate_summary:  false,
         },
@@ -338,6 +347,11 @@
         },
 
         async init() {
+          const now       = new Date()
+          const prevMonth = now.getMonth() || 12  // getMonth() is 0-based; Jan(0) → 12 (Dec)
+          const prevYear  = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear()
+          this.form.month = String(prevMonth)
+          this.form.year  = String(prevYear)
           await Promise.all([this.loadProperties(), this.loadAllReports()])
         },
 
@@ -370,9 +384,11 @@
           this.conflict             = false
           this.generateError        = ''
           this.aiWarning            = ''
-          this.form.regenerate_summary = false
           this.generating    = true
           this.draftReport   = null
+
+          const regenerateSummary = this.form.regenerate_summary
+          this.form.regenerate_summary = false
 
           try {
             const res = await fetch('/api/owner-reports/generate', {
@@ -385,7 +401,7 @@
                 year:         parseInt(this.form.year),
                 overwrite:    overwrite || undefined,
                 host_context:       this.form.host_context || undefined,
-                regenerate_summary: this.form.regenerate_summary || undefined,
+                regenerate_summary: regenerateSummary || undefined,
               }),
             })
 

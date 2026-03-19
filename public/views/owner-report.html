@@ -129,6 +129,7 @@
         <div class="report-summary__body" x-text="report && report.ai_summary"></div>
       </div>
 
+
       <!-- ── Occupancy ──────────────────────────────────────── -->
       <div class="report-section">
         <p class="report-section__heading">
@@ -211,9 +212,36 @@
         <template x-if="data?.account_balance?.has_balance">
           <div>
             <div class="report-financials">
-              <div class="report-financials__row">
-                <span>Closing Account Balance</span>
-                <span class="report-financials__amount" x-text="fmt(data?.account_balance?.closing_balance)"></span>
+              <!-- Dual account: checking + savings → combined subtotal -->
+              <!-- Dual account: operating + reserves → combined subtotal -->
+              <template x-if="data?.account_balance?.reserves_balance > 0">
+                <div>
+                  <div class="report-financials__row">
+                    <span>Operating Account Balance</span>
+                    <span class="report-financials__amount" x-text="fmt(data?.account_balance?.operating_balance)"></span>
+                  </div>
+                  <div class="report-financials__row">
+                    <span>Reserves Account Balance</span>
+                    <span class="report-financials__amount" x-text="fmt(data?.account_balance?.reserves_balance)"></span>
+                  </div>
+                  <div class="report-financials__row report-financials__row--subtotal">
+                    <span>Combined Balance</span>
+                    <span class="report-financials__amount" x-text="fmt(data?.account_balance?.combined_balance)"></span>
+                  </div>
+                </div>
+              </template>
+
+              <!-- Single account: one consolidated line -->
+              <template x-if="!(data?.account_balance?.reserves_balance > 0)">
+                <div class="report-financials__row">
+                  <span>Operating Account Balance</span>
+                  <span class="report-financials__amount" x-text="fmt(data?.account_balance?.combined_balance)"></span>
+                </div>
+              </template>
+
+              <div class="report-financials__row" x-show="data?.property?.pm_commission_rate > 0">
+                <span>Management Fee (deducted)</span>
+                <span class="report-financials__amount" x-text="fmtNeg(data?.account_balance?.mgmt_fee_deduction)"></span>
               </div>
               <div class="report-financials__row">
                 <span>Operating Minimum Reserve</span>
@@ -240,8 +268,8 @@
               padding: var(--space-4);
             ">
               <p style="font-family: var(--font-body); font-size: var(--text-sm); color: var(--color-warning);">
-                The account balance of <strong x-text="fmt(data?.account_balance?.closing_balance)"></strong>
-                is below the <strong x-text="fmt(data?.account_balance?.operating_minimum)"></strong> operating minimum.
+                The operating account balance of <strong x-text="fmt(data?.account_balance?.combined_balance)"></strong>
+                is below the <strong x-text="fmt(data?.account_balance?.operating_minimum)"></strong> operating minimum after management fees.
                 No distribution this month.
               </p>
             </div>
@@ -278,6 +306,27 @@
           <p class="report-table__empty">No bookings this month.</p>
         </template>
       </div>
+
+      <!-- ── Featured Guest Review ─────────────────────────── -->
+      <template x-if="featured_review">
+        <div class="report-section" x-data="reviewBlock(featured_review)">
+          <div class="report-pullquote">
+            <div class="report-pullquote__mark">&#10077;</div>
+            <div class="report-pullquote__body">
+              <p class="report-pullquote__text">
+                <span x-text="displayText"></span><span x-show="!expanded && isLong">...</span>
+              </p>
+              <button
+                x-show="isLong"
+                class="report-pullquote__toggle"
+                @click="expanded = !expanded"
+                x-text="expanded ? 'Show less \u2191' : 'Read full review \u2193'"
+              ></button>
+              <footer class="report-pullquote__attribution" x-text="byline"></footer>
+            </div>
+          </div>
+        </div>
+      </template>
 
       <!-- ── Coming Up ──────────────────────────────────────── -->
       <div class="report-section">
@@ -348,10 +397,11 @@
 
     function reportViewer() {
       return {
-        loading: true,
-        error:   '',
-        data:    null,
-        report:  null,
+        loading:         true,
+        error:           '',
+        data:            null,
+        report:          null,
+        featured_review: null,
 
         async init() {
           const params = parseReportParams()
@@ -369,8 +419,9 @@
               throw new Error(err.error || 'Failed to load report')
             }
             const json = await res.json()
-            this.data   = json
-            this.report = json.report
+            this.data            = json
+            this.report          = json.report
+            this.featured_review = json.featured_review || null
 
             if (json.property && json.owner) {
               document.title = `${json.property.display_name} — ${MONTH_NAMES[json.month]} ${json.year} — Owner Report`
@@ -430,6 +481,33 @@
           if (!platform) return '—'
           const map = { airbnb: 'Airbnb', vrbo: 'VRBO', direct: 'Direct' }
           return map[platform.toLowerCase()] || platform
+        },
+      }
+    }
+
+    const COLLAPSE_THRESHOLD = 280
+
+    function reviewBlock(review) {
+      const text     = review?.review_text || ''
+      const isLong   = text.length > COLLAPSE_THRESHOLD
+
+      // Byline: — Lesa · Elk Grove, CA · October 2023
+      const parts = ['— ' + (review?.guest_name || 'Guest')]
+      if (review?.guest_location) parts.push(review.guest_location)
+      if (review?.review_date) {
+        const d = new Date(review.review_date + 'T00:00:00')
+        parts.push(MONTH_NAMES[d.getMonth() + 1] + ' ' + d.getFullYear())
+      }
+      const byline = parts.join(' · ')
+
+      return {
+        expanded:    false,
+        isLong,
+        byline,
+        get displayText() {
+          return this.isLong && !this.expanded
+            ? text.slice(0, COLLAPSE_THRESHOLD)
+            : text
         },
       }
     }

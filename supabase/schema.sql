@@ -14,7 +14,7 @@ create table properties (
   available_nights              int default 365,
   active                        boolean default true,   -- false until property goes live
   pm_commission_rate            numeric(5,2) default 0.00, -- e.g. 16.00 = 16%
-  operating_minimum_balance     numeric(10,2) default 0.00, -- reserve kept in account; payout = closing_balance - this
+  operating_minimum_balance     numeric(10,2) default 0.00, -- reserve kept in account; payout = combined_balance - mgmt_fee - this
   created_at           timestamptz default now()
 );
 
@@ -23,6 +23,7 @@ create table owners (
   id          uuid primary key default gen_random_uuid(),
   name        text not null,
   slug        text,                   -- url-safe identifier, e.g. 'michael-fitzgerald'
+  nickname    text,                   -- informal name for AI summaries, e.g. 'Pops', 'Goose'
   email       text,
   phone       text,
   notes       text,
@@ -85,14 +86,27 @@ create table expenses (
 
 -- ── Account Balances ──────────────────────────────────────────
 create table account_balances (
-  id               uuid primary key default gen_random_uuid(),
-  property_id      text references properties(id),
-  month            int not null,             -- 1–12
-  year             int not null,
-  closing_balance  numeric(10,2) not null,   -- month-end Baselane balance
-  notes            text,
-  created_at       timestamptz default now(),
+  id                uuid primary key default gen_random_uuid(),
+  property_id       text references properties(id),
+  month             int not null,                    -- 1–12
+  year              int not null,
+  operating_account_balance  numeric(10,2) not null,  -- month-end Baselane operating account
+  reserves_account_balance   numeric(10,2) default 0, -- month-end Baselane reserves account (interest-earning, optional)
+  notes             text,
+  created_at        timestamptz default now(),
   unique(property_id, month, year)
+);
+
+-- ── Reviews ────────────────────────────────────────────────────
+create table reviews (
+  id             uuid primary key default gen_random_uuid(),
+  property_id    text references properties(id),
+  guest_name     text,
+  guest_location text,              -- e.g. 'Elk Grove, CA'
+  review_text    text not null,
+  platform       text,              -- 'Airbnb', 'VRBO', 'Direct', etc.
+  review_date    date,
+  created_at     timestamptz default now()
 );
 
 -- ── Owner Reports ─────────────────────────────────────────────
@@ -108,7 +122,8 @@ create table owner_reports (
   generated_at    timestamptz,
   published_at    timestamptz,
   created_at      timestamptz default now(),
-  unique(property_id, owner_id, month, year)
+  unique(property_id, owner_id, month, year),
+  featured_review_id  uuid references reviews(id)
 );
 
 -- ── Indexes ───────────────────────────────────────────────────
@@ -129,10 +144,10 @@ insert into properties (id, display_name, public_name, market, address, igms_nam
   ('lee-ct',        'Lee Ct',        'Canal Front Cottage', 'OBX',        '138 Lee Ct, Kill Devil Hills, NC',            'Canal Keep',           'Lee Court',     365, true,  16.00);
 
 -- ── Seed: Owners ──────────────────────────────────────────────
-insert into owners (id, name, slug, email) values
-  ('00000000-0000-0000-0000-000000000001', 'Brian FitzGerald',   'brian-fitzgerald',   null),
-  ('00000000-0000-0000-0000-000000000002', 'Michael FitzGerald', 'michael-fitzgerald', null),
-  ('00000000-0000-0000-0000-000000000003', 'Moriah Angott',      'moriah-angott',      null);
+insert into owners (id, name, slug, nickname, email) values
+  ('00000000-0000-0000-0000-000000000001', 'Brian FitzGerald',   'brian-fitzgerald',   null,    null),
+  ('00000000-0000-0000-0000-000000000002', 'Michael FitzGerald', 'michael-fitzgerald', 'Pops',  null),
+  ('00000000-0000-0000-0000-000000000003', 'Moriah Angott',      'moriah-angott',      'Goose', null);
 
 -- ── Seed: Property Owners ─────────────────────────────────────
 insert into property_owners (property_id, owner_id, ownership_pct) values

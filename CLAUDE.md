@@ -71,7 +71,10 @@ Two data sources serve different purposes — never mix them for the same calcul
 - `properties.operating_minimum_balance` (numeric 10,2) — reserve kept in Baselane account; payout = closing_balance − this
 - `expenses.source_hash` (text, unique) — SHA-256 upsert key for Baselane imports
 - `owners.slug` (text) — URL-safe identifier used in report URLs
-- `account_balances` table — month-end closing balance per property/month/year; unique on (property_id, month, year)
+- `owners.nickname` (text) — informal name used in AI-generated summaries (e.g. 'Pops', 'Goose'); falls back to first name if null
+- `account_balances` table — month-end balances per property/month/year; unique on (property_id, month, year). Columns: `operating_account_balance` (required), `reserves_account_balance` (default 0, optional — for properties with interest-earning reserves)
+- `reviews` table — manually seeded guest reviews per property; includes `guest_location` field (e.g. 'Elk Grove, CA')
+- `owner_reports.featured_review_id` (uuid) — randomly selected at generation time and permanently stamped on the report; re-rolled on every regeneration
 
 Seed data (correct state):
 - Brian FitzGerald (`00000000-...0001`, slug `brian-fitzgerald`)
@@ -272,14 +275,22 @@ e.g. `ops.bmf.llc/owner-reports/03-2026/michael-fitzgerald/hidden-hollow`
 5. **Financials waterfall** — Gross Revenue → Management Fee (est. badge if estimated) → dynamic expense categories → Net Cash Flow total
 6. **Owner Payout section** — Closing Balance − Operating Minimum → Owner Payout. Shows proration row for split ownership. Warning if payout = 0.
 7. **Bookings This Month** — table: dates, platform, nights, payout. Comp stays show "Comp".
-8. **Coming Up** — next month's bookings: dates, nights, platform, expected payout.
+8. **Featured Guest Review** — randomly selected at generation time, permanently stamped. Collapses at 280 chars with inline expand toggle. Byline: guest name · location · month year.
+9. **Coming Up** — next month's bookings: dates, nights, platform, expected payout.
 9. **Footer** — contact Brian / BMF branding
 
+### Payout display — single vs. dual account
+- If `reserves_balance = 0`: show one "Operating Account Balance" line (combined total).
+- If `reserves_balance > 0`: show Operating + Reserves lines, then a "Combined Balance" subtotal, then deductions.
+- Zero payout message always uses "operating account balance" regardless of structure.
+
 ### Payout calculation
-- Owner Payout = (`closing_balance` − `operating_minimum_balance`) × (`ownership_pct` / 100)
-- `closing_balance` entered manually in Admin → Account Balance
+- `combined_balance` = `operating_account_balance` + `reserves_account_balance`
+- `mgmt_fee` = `gross_revenue` × (`pm_commission_rate` / 100)  ← not yet extracted from account at report time
+- `distributable` = `combined_balance` − `mgmt_fee` − `operating_minimum_balance`
+- Owner Payout = `MAX(0, distributable)` × (`ownership_pct` / 100)
+- Balances entered manually in Admin → Account Balance
 - `operating_minimum_balance` stored on `properties` table
-- If `closing_balance ≤ operating_minimum_balance`, payout = $0
 - For split-ownership: each owner's payout is prorated by their `ownership_pct`
 
 ### Net Cash Flow calculation

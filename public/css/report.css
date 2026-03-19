@@ -249,6 +249,13 @@
   color: var(--color-text-muted);
 }
 
+.report-financials__row--subtotal {
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--space-2);
+  margin-bottom: var(--space-2);
+  font-weight: 500;
+}
+
 .report-financials__row--total {
   color: var(--color-accent);
   font-size: var(--text-xl);
@@ -346,6 +353,62 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
   margin-top: var(--space-3);
+}
+
+/* ── Guest Review Pullquote ──────────────────────────────────── */
+.report-pullquote {
+  display: flex;
+  gap: var(--space-4);
+  padding: var(--space-6) var(--space-6);
+  background: #fffdfa;
+  border-left: 3px solid var(--color-accent);
+  border-radius: var(--border-radius);
+}
+
+.report-pullquote__mark {
+  font-family: var(--font-display);
+  font-size: 3rem;
+  line-height: 1;
+  color: #2C5F4A;
+  flex-shrink: 0;
+  margin-top: -0.25rem;
+  user-select: none;
+}
+
+.report-pullquote__body {
+  flex: 1;
+}
+
+.report-pullquote__text {
+  font-family: var(--font-display);
+  font-size: 0.9375rem;
+  font-style: italic;
+  line-height: 1.75;
+  color: var(--color-text);
+  margin: 0 0 var(--space-3) 0;
+}
+
+.report-pullquote__toggle {
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-accent);
+  cursor: pointer;
+  display: block;
+  margin-bottom: var(--space-4);
+}
+
+.report-pullquote__toggle:hover {
+  text-decoration: underline;
+}
+
+.report-pullquote__attribution {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-faint);
+  letter-spacing: 0.03em;
 }
 
 /* ── Print ───────────────────────────────────────────────────── */

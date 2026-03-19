@@ -2,9 +2,9 @@
 // POST /api/owner-reports/generate
 // Body: { property_id, owner_id, month, year, overwrite? }
 // Creates or overwrites a draft report with AI-generated summary
-import { supabase } from '../../lib/supabase.js'
+import { supabase }         from '../../lib/supabase.js'
 import { generateReportData } from '../../lib/services/reportGenerator.js'
-import { generateSummary } from '../../lib/services/aiSummary.js'
+import { generateSummary }    from '../../lib/services/aiSummary.js'
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()
@@ -62,18 +62,30 @@ export default async function handler(req, res) {
     }
   }
 
+  // Pick a random review for this property and stamp it on the report
+  // Fetch all IDs and pick randomly in JS — Supabase doesn't support ORDER BY random() via the JS client
+  const { data: reviewIds } = await supabase
+    .from('reviews')
+    .select('id')
+    .eq('property_id', property_id)
+
+  const featuredReviewId = reviewIds?.length > 0
+    ? reviewIds[Math.floor(Math.random() * reviewIds.length)].id
+    : null
+
   const now = new Date().toISOString()
 
   const upsertRow = {
     property_id,
     owner_id,
-    month:        m,
-    year:         y,
-    status:       'draft',
-    ai_summary:   aiSummary,
-    manual_notes: null,
-    generated_at: now,
-    published_at: null,
+    month:              m,
+    year:               y,
+    status:             'draft',
+    ai_summary:         aiSummary,
+    manual_notes:       null,
+    generated_at:       now,
+    published_at:       null,
+    featured_review_id: featuredReviewId,
   }
 
   const { data: saved, error: saveErr } = await supabase
