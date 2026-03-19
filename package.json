@@ -16,6 +16,6 @@
     "papaparse": "^5.5.3"
   },
   "devDependencies": {
-    "vercel": "^50.32.1"
+    "vercel": "^50.33.1"
   }
 }

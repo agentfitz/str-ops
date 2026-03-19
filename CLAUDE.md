@@ -38,16 +38,20 @@ Two data sources serve different purposes — never mix them for the same calcul
 
 | Purpose | Source | Table |
 |---|---|---|
-| Dollar amounts (revenue, expenses, net cash flow, owner payout) | Baselane | `expenses` |
+| Gross revenue, YTD revenue, historical comparisons | IGMS | `reservations` |
+| Expenses, management fee | Baselane | `expenses` |
+| Account balance, owner payout | Manual entry | `account_balances` |
 | Bookings, nights, occupancy, guest details | IGMS | `reservations` |
 
-**Gross Revenue** = `SUM(amount)` from `expenses` where `type = 'Revenue'` AND `category = 'Rents'` for the month. This captures Airbnb, VRBO, Stripe, and any off-platform payments that bypass IGMS.
+**Gross Revenue** = `SUM(expected_total_payout)` from `reservations` where `stay_type = 'Revenue'` and `checkin_date` falls within the report month. This is accrual-correct — revenue tied to stay dates, not deposit dates.
 
-**Why not IGMS?** Direct bookings via Stripe and off-platform extensions appear in Baselane but not in IGMS (or with understated payouts). Example: Walker Ave guest extended off-platform — $500.74 hit Baselane but IGMS understated the reservation payout.
+**Why IGMS, not Baselane?** All legitimate bookings — Airbnb, VRBO, and direct bookings through stay.bmf.llc — appear in IGMS with correct stay dates and expected payout amounts. Baselane deposits are cash-basis: a 50% deposit for an August stay hits the bank in March, which would distort monthly revenue. IGMS is accrual-correct. Use it for all revenue figures.
 
-**YTD Gross Revenue** — same logic, Jan 1 through end of report month, from `expenses`.
+**YTD Gross Revenue** — same logic, Jan 1 through end of report month, from `reservations`.
 
-**Occupancy** — keep using `reservations` table. Revenue nights are accurate in IGMS even when payout is understated.
+**Occupancy** — `reservations` table. Revenue nights and stay dates are accurate in IGMS.
+
+**Known gap:** Manual off-platform Stripe invoices (a guest extended their stay via a direct Stripe invoice before the direct booking site was live) will appear in Baselane but not IGMS. This was a one-off pre-launch workaround. If it ever recurs, the correct fix is to manually add the reservation in IGMS — not to change the revenue source logic.
 
 ## Business Rules
 - Occupancy = revenue nights / available nights (365 per property, hardcoded for now — `available_nights` column exists in schema for future use)
