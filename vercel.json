@@ -3,6 +3,14 @@
   "functions": {
     "api/upload.js": { "maxDuration": 300 }
   },
+  "redirects": [
+    {
+      "source": "/dashboard",
+      "has": [{ "type": "host", "value": "ops.bmf.llc" }],
+      "destination": "/",
+      "permanent": false
+    }
+  ],
   "rewrites": [
     {
       "source": "/",
