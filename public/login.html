@@ -96,6 +96,14 @@
       color: var(--color-negative);
       line-height: 1.5;
     }
+
+    .login-signout {
+      margin-bottom: 20px;
+      font-family: var(--font-mono);
+      font-size: 0.6875rem;
+      letter-spacing: 0.06em;
+      color: var(--color-accent);
+    }
   </style>
 </head>
 <body>
@@ -103,6 +111,8 @@
     <h1 class="login-wordmark">BMF Enterprises</h1>
     <p class="login-eyebrow">Operations Dashboard</p>
     <div class="login-divider"></div>
+
+    <p id="logout-msg" class="login-signout" style="display:none;">You've been signed out.</p>
 
     <a href="/api/auth/google" class="btn-google">
       <!-- Google "G" icon -->
@@ -123,8 +133,13 @@
   </div>
 
   <script>
-    if (new URLSearchParams(window.location.search).get('error') === 'unauthorized') {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('error') === 'unauthorized') {
       document.getElementById('error-msg').style.display = 'block'
+    }
+    if (params.get('logged_out') === 'true') {
+      document.getElementById('logout-msg').style.display = 'block'
+      window.history.replaceState({}, '', '/login')
     }
   </script>
 </body>
