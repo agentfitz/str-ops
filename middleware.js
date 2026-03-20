@@ -51,6 +51,13 @@ async function verifyToken(token) {
 }
 
 export default async function middleware(request) {
+  const host = request.headers.get('host') ?? ''
+
+  // stay.bmf.llc is fully public — no auth check
+  if (host.includes('stay.bmf.llc')) {
+    return
+  }
+
   const { pathname } = new URL(request.url)
 
   if (PUBLIC_PATHS.some(p => pathname === p || pathname.startsWith(p))) {

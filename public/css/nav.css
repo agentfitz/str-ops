@@ -12,8 +12,8 @@
   left: 0;
   right: 0;
   height: var(--util-nav-height);
-  background: #EDEAE4;
-  border-bottom: 1px solid var(--color-border);
+  background: #3C3C3C;
+  border-bottom: none;
   z-index: 101;
 }
 
@@ -29,7 +29,7 @@
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--color-text-faint);
+  color: rgba(255, 255, 255, 0.4);
 }
 
 .util-nav__right {
@@ -39,16 +39,16 @@
 }
 
 .util-nav__sep {
-  opacity: 0.5;
+  color: rgba(255, 255, 255, 0.3);
 }
 
 .util-nav__link {
-  color: var(--color-text-faint);
+  color: rgba(255, 255, 255, 0.7);
   text-decoration: none;
 }
 
 .util-nav__link:hover {
-  color: var(--color-text-muted);
+  color: #FFFFFF;
   text-decoration: underline;
 }
 
