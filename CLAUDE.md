@@ -85,7 +85,7 @@ Seed data (correct state):
 
 ## Tech Stack
 - **Backend**: Node.js (ESM) — `server.js` uses **Express** for local dev, serving static files and API routes
-- **Auth**: Passport.js + Google OAuth 2.0 + express-session. `lib/auth.js` (strategy), `lib/requireAuth.js` (middleware). All ops routes protected; `/login`, `/api/auth/*`, and owner report viewer are public.
+- **Auth**: Passport.js + Google OAuth 2.0 + JWT cookie. `lib/auth.js` (strategy), `lib/jwt.js` (sign/verify), `middleware.js` (Vercel Edge Middleware — intercepts at CDN before any file is served). Cookie: `bmf-auth`, 7-day, HttpOnly/Secure/SameSite=Strict, HMAC-SHA256 signed with `SESSION_SECRET`. OAuth handshake uses `cookie-session` (stateless — stored in signed `bmf-oauth` cookie, works across serverless invocations). Local dev: `lib/requireAuth.js` does same JWT check in Express. Public routes: `/login`, `/api/auth/`, `/owner-reports/`, `/views/owner-report`, `/api/reports/`, `/book-direct/`, `/css/`, `/js/`, `/img/`.
 - **API style**: Vercel serverless handler pattern (`export default async function handler(req, res)`) — works both locally and deployed to Vercel
 - **Database**: Supabase (Postgres) — `lib/supabase.js` for the client
 - **Frontend**: Vanilla HTML + Alpine.js for reactivity, custom CSS design system (tokens, base, nav, card, table)

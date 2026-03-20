@@ -2,14 +2,11 @@
 // Usage: node server.js
 
 import 'dotenv/config'
-import express      from 'express'
-import session      from 'express-session'
-import fs           from 'fs'
-import path         from 'path'
+import express    from 'express'
+import fs         from 'fs'
+import path       from 'path'
 import { fileURLToPath } from 'url'
-import passport          from './lib/auth.js'
 import { requireAuth }   from './lib/requireAuth.js'
-import { getSessionStore } from './lib/sessionStore.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const PORT = 3000
@@ -19,33 +16,11 @@ const app = express()
 app.use(express.json())
 app.use(express.urlencoded({ extended: false }))
 
-// ── Session + Passport ────────────────────────────────────────
-app.use(session({
-  store:             getSessionStore(),
-  secret:            process.env.SESSION_SECRET || 'dev-secret-change-me',
-  resave:            false,
-  saveUninitialized: false,
-  cookie:            { secure: false, sameSite: 'lax', maxAge: 30 * 24 * 60 * 60 * 1000 },
-}))
-app.use(passport.initialize())
-app.use(passport.session())
-
-// ── Auth routes (public) ──────────────────────────────────────
-app.get('/api/auth/google',
-  passport.authenticate('google', { scope: ['email', 'profile'] })
-)
-
-app.get('/api/auth/callback/google',
-  passport.authenticate('google', {
-    successRedirect: '/',
-    failureRedirect: '/login?error=unauthorized',
-  })
-)
-
-app.get('/api/auth/logout', (req, res) => {
-  req.logout(() => {})
-  req.session.destroy()
-  res.redirect('/login')
+// ── Auth routes (public — handlers include their own cookie-session + passport) ──
+app.all('/api/auth/*path', async (req, res) => {
+  const handler = await getApiHandler(req.path)
+  if (handler) return await handler(req, res)
+  res.status(404).json({ error: 'Not found' })
 })
 
 // ── Login page (public) ───────────────────────────────────────
@@ -61,7 +36,7 @@ app.get('/owner-reports/*path', (_req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'views', 'owner-report.html'))
 })
 
-// ── Auth wall — everything below requires login ───────────────
+// ── Auth wall — everything below requires a valid JWT cookie ──
 app.use(requireAuth)
 
 // ── API routes (dynamic, cache-busted) ───────────────────────

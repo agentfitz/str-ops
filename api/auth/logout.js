@@ -1,8 +1,7 @@
 // api/auth/logout.js
-import { withAuth } from '../../lib/withAuth.js'
-
-export default withAuth(function handler(req, res) {
-  req.logout?.(() => {})
-  req.session?.destroy()
+export default function handler(req, res) {
+  res.setHeader('Set-Cookie',
+    'bmf-auth=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0'
+  )
   res.redirect('/login')
-})
+}
