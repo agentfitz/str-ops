@@ -55,7 +55,7 @@
 
       <!-- Filters -->
       <div class="filter-bar" style="margin-bottom: var(--space-8);">
-        <select class="filter-select" x-model="selectedYear" @change="fetchMetrics()">
+        <select class="filter-select filter-select--year" x-model="selectedYear" @change="fetchMetrics()">
           <template x-for="year in years" :key="year">
             <option :value="year" x-text="year"></option>
           </template>
@@ -206,10 +206,10 @@
       const now = new Date()
       return {
         loading: true,
-        selectedYear: now.getFullYear(),
+        selectedYear: String(now.getFullYear()),
         selectedMonth: String(now.getMonth() + 1), // 1-based, default to current month
         selectedProperty: 'all',
-        years: [],
+        years: [String(now.getFullYear())],
         months: MONTH_NAMES.map((label, i) => ({ label, value: String(i + 1) })),
         properties: [],
         metrics: {},
@@ -246,10 +246,11 @@
         async fetchYears() {
           const res = await fetch('/api/reservations/years')
           const data = await res.json()
-          this.years = data
+          const years = data.map(String)
+          this.years = years
           // Keep current year selected if it exists, otherwise default to most recent
-          if (data.length && !data.includes(this.selectedYear)) {
-            this.selectedYear = data[0]
+          if (years.length && !years.includes(this.selectedYear)) {
+            this.selectedYear = years[0]
           }
         },
 

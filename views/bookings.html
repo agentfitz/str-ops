@@ -98,7 +98,7 @@
 
       <!-- Filters -->
       <div class="filter-bar" style="margin-bottom: var(--space-8);">
-        <select class="filter-select" x-model="selectedYear" @change="fetchData()">
+        <select class="filter-select filter-select--year" x-model="selectedYear" @change="fetchData()">
           <template x-for="year in years" :key="year">
             <option :value="year" x-text="year"></option>
           </template>
@@ -353,14 +353,14 @@
       const now = new Date()
       return {
         loading: true,
-        selectedYear: now.getFullYear(),
+        selectedYear: String(now.getFullYear()),
         selectedMonth: 'all',
         selectedProperty: 'all',
         tableMonth: 'all',
         tableProperty: 'all',
         tableStayType: 'all',
         tablePlatform: 'all',
-        years: [],
+        years: [String(now.getFullYear())],
         months: [
           { label: 'January', value: '1' },
           { label: 'February', value: '2' },
@@ -408,9 +408,10 @@
         fetchYears: async function() {
           const res = await fetch('/api/reservations/years')
           const data = await res.json()
-          this.years = data
-          if (data.length && !data.includes(this.selectedYear)) {
-            this.selectedYear = data[0]
+          const years = data.map(String)
+          this.years = years
+          if (years.length && !years.includes(this.selectedYear)) {
+            this.selectedYear = years[0]
           }
         },
         fetchData: async function() {

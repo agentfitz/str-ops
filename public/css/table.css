@@ -103,6 +103,10 @@
   border-color: var(--color-accent);
 }
 
+.filter-select--year {
+  min-width: 80px;
+}
+
 @media (max-width: 640px) {
   .table th,
   .table td {
