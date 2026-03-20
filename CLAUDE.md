@@ -55,7 +55,7 @@ Two data sources serve different purposes — never mix them for the same calcul
 
 ## Business Rules
 - Occupancy = revenue nights / available nights (365 per property, hardcoded for now — `available_nights` column exists in schema for future use)
-- Owner Revenue = Gross Revenue minus PM commission (no standard rate currently defined)
+- Owner Revenue = Gross Revenue minus PM commission. Rates are per-property — see PM Commission rates in the Owner Reports section.
 - Kenview is inactive — exclude from all revenue metrics, charts, and property filters
 - Stay type `Void` is excluded from all imports entirely
 - Baselane `Transfers & Other` type rows are skipped on import
@@ -75,6 +75,7 @@ Two data sources serve different purposes — never mix them for the same calcul
 - `account_balances` table — month-end balances per property/month/year; unique on (property_id, month, year). Columns: `operating_account_balance` (required), `reserves_account_balance` (default 0, optional — for properties with interest-earning reserves)
 - `reviews` table — manually seeded guest reviews per property; includes `guest_location` field (e.g. 'Elk Grove, CA')
 - `owner_reports.featured_review_id` (uuid) — randomly selected at generation time and permanently stamped on the report; re-rolled on every regeneration
+- `owner_reports.manual_payout_amount` (numeric 10,2) — optional payout override: null = use formula (default), 0 = suppress distribution, any amount = override in either direction
 
 Seed data (correct state):
 - Brian FitzGerald (`00000000-...0001`, slug `brian-fitzgerald`)
@@ -103,7 +104,19 @@ Seed data (correct state):
 
 ## Project Structure
 ```
+middleware.js               # Vercel Edge Middleware — JWT auth check at CDN level
+server.js                   # Local dev Express server
+vercel.json                 # Vercel deployment config
 api/                        # API route handlers (Vercel serverless pattern)
+  auth/
+    google.js               # GET /api/auth/google — initiates Google OAuth
+    logout.js               # GET /api/auth/logout — clears bmf-auth cookie
+    callback/
+      google.js             # GET /api/auth/callback/google — sets JWT cookie on success
+  igms/
+    connect.js              # GET /api/igms/connect — redirects to IGMS OAuth page
+    callback.js             # GET /api/igms/callback?code= — exchanges auth code for token
+    sync.js                 # POST /api/igms/sync — fetches bookings from IGMS API, upserts to DB
   metrics/
     summary.js              # GET /api/metrics/summary?year&month&property
     forward.js              # GET /api/metrics/forward?property
@@ -111,60 +124,68 @@ api/                        # API route handlers (Vercel serverless pattern)
   reservations/
     index.js                # GET /api/reservations?year&property
     years.js                # GET /api/reservations/years
+  reports/
+    summary.js              # GET /api/reports/summary?property=&owner=&month=&year= — consolidated report data (public — used by owner report viewer)
+  owner-reports/
+    index.js                # GET /api/owner-reports — list all reports with status
+    data.js                 # GET /api/owner-reports/data?property=&owner=&month=&year= — full report data for viewer
+    generate.js             # POST /api/owner-reports/generate
+    save.js                 # PUT /api/owner-reports/save
+    publish.js              # POST /api/owner-reports/publish
   properties.js             # GET /api/properties
   owners.js                 # GET /api/owners?property= (optional filter)
   upload.js                 # POST /api/upload (CSV import)
   account-balances.js       # POST /api/account-balances (upsert month-end closing balance)
-  reports/
-    summary.js              # GET /api/reports/summary?property=&owner=&month=&year= (consolidated report data)
-  owner-reports/
-    index.js                # GET /api/owner-reports (list all with status)
-    generate.js             # POST /api/owner-reports/generate
-    save.js                 # PUT /api/owner-reports/save
-    publish.js              # POST /api/owner-reports/publish
 lib/
+  auth.js                   # Passport Google OAuth 2.0 strategy + serialize/deserialize
+  jwt.js                    # createToken / verifyToken using Web Crypto (Edge + Node compatible)
+  requireAuth.js            # JWT cookie check middleware for local Express server
+  withAuth.js               # Wraps api/auth/* handlers with cookie-session + passport
   supabase.js               # Supabase client
   propertyMap.js            # IGMS/Baselane name → canonical property ID mapping
   services/
     classifier.js           # Stay type classification logic
-    reportGenerator.js      # Owner report generation
+    reportGenerator.js      # Owner report data aggregation
     aiSummary.js            # Claude API-powered report summaries
 public/
-  index.html                # Dashboard — this IS the dashboard, served at / on ops.bmf.llc
-                            # It lives at public/index.html (not public/views/) specifically
-                            # to satisfy Vercel's static file serving for the root route.
-                            # There is no separate dashboard.html — do not create one.
-  views/                    # Internal app pages
-    bookings.html           # Functional
-    financials.html         # Stub — not yet functional
+  index.html                # Dashboard — served at / on ops.bmf.llc
+                            # Lives at public/index.html (not public/views/) to satisfy
+                            # Vercel static file serving for root route.
+  dashboard.html            # LEGACY/STALE — do not link to or build on this file.
+                            # The real dashboard is index.html.
+  login.html                # Sign-in page — public, Google OAuth CTA
+  views/                    # Internal app pages (all auth-protected)
+    bookings.html           # Functional — reservations table + charts
     reports.html            # Functional — owner report generation + admin
-    owner-report.html       # Owner report viewer (single template, parses URL path)
+    owner-report.html       # Owner report viewer — PUBLIC (shareable links, no auth required)
     admin.html              # Functional — CSV upload + account balance entry
-  book-direct/              # Guest-facing direct booking landing pages
-    index.html              # Property selector (stay.bmf.llc root)
+    # Note: financials.html is planned but not yet created
+  book-direct/              # Guest-facing direct booking pages (stay.bmf.llc)
+    index.html              # Property selector
     canal-front-cottage.html
     hidden-hollow.html
     village-lane.html
     lindley-park-cottage.html
     img/                    # Property photos (.avif) + brian-moriah.jpg
-    book-direct.css         # Shared styles for book-direct pages
-  js/                       # Client-side JS
-  css/                      # Design tokens and component styles
-    tokens.css
+    book-direct.css         # Shared styles
+  js/
+    dashboard.js            # Dashboard chart + data logic
+    reports.js              # Owner report viewer JS
+    upload.js               # CSV upload handling
+  css/
+    tokens.css              # Design tokens (colors, fonts, spacing)
     base.css
     nav.css
     card.css
     table.css
     form.css
-    report.css                # Owner report viewer styles (separate from dashboard)
+    report.css              # Owner report viewer styles (separate from dashboard)
 scripts/
   importers/
     igms.js                 # CLI: npm run import:igms path/to/file.csv
     baselane.js             # CLI: npm run import:baselane path/to/file.csv
 supabase/
   schema.sql                # DB schema — canonical, kept in sync with live DB
-server.js                   # Local dev server
-vercel.json                 # Vercel deployment config
 ```
 
 ## Deployment
@@ -274,11 +295,11 @@ e.g. `ops.bmf.llc/owner-reports/03-2026/michael-fitzgerald/hidden-hollow`
 
 ### Report layout (v1)
 1. **Header** — property name, owner name, month/year + YTD gross revenue
-2. **Two hero cards** — Gross Revenue (left) + Owner Payout (right, "Pending" if no balance entered yet)
+2. **Two hero cards** — Gross Revenue (left) + Total Holdings (right, combined operating + reserves balance, "Pending" if no balance entered yet)
 3. **Executive Summary** — AI-generated (Claude API), only shown if `ai_summary` exists. Editable before publishing.
 4. **Occupancy Snapshot** — Two-column layout: text metrics (X of Y nights, occupancy %, owner stay) on the left; a 7-column calendar grid on the right. Grid cells: revenue nights = dark green (#2C5F4A), owner/comp stays = muted green, vacant = warm off-white (#F0EDE8), today = dot indicator. Derived from existing `currentBookings` data, no extra API call. Stacks vertically on mobile.
 5. **Financials waterfall** — Gross Revenue → Management Fee (est. badge if estimated) → dynamic expense categories → Net Cash Flow total
-6. **Owner Payout section** — Closing Balance − Operating Minimum → Owner Payout. Shows proration row for split ownership. Warning if payout = 0.
+6. **Owner Payout section** — account balance(s) → Operating Minimum deduction → Owner Distribution. Two-level wash system: Level 1 (`--wash`, dotted border) for subtotals like Total Holdings; Level 2 (`--total`, solid border, Playfair Display) for final Owner Distribution. "No distribution this month." shown as plain italic when payout = 0 (no warning box, no proration row).
 7. **Bookings This Month** — table: dates, platform, nights, payout. Comp stays show "Comp".
 8. **Featured Guest Review** — randomly selected at generation time, permanently stamped. Collapses at 280 chars with inline expand toggle. Byline: guest name · location · month year.
 9. **Coming Up** — next month's bookings: dates, nights, platform, expected payout.
@@ -353,6 +374,6 @@ Stored in `properties.pm_commission_rate` (numeric, e.g. 16.00 = 16%).
 - [ ] How reports are delivered to owners (email link? they log in? Brian just sends the URL?)
 - [ ] Whether there are plans to expand the property portfolio
 - [ ] Seasonal pricing strategy or yield management goals
-- [ ] IGMS API access status (applied for, pending response) — critical path for live data sync
+- [x] IGMS API access — obtained. OAuth flow implemented (`api/igms/connect.js`, `api/igms/callback.js`). Sync endpoint at `api/igms/sync.js`. Full integration status unknown — may be partially complete.
 - [x] Expenses in owner reports — implemented via Baselane CSV import + expenses table
 - [ ] Brian's ownership % on Kenview (he and Moriah live there — relevant when it goes active)
