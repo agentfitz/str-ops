@@ -9,7 +9,7 @@ import { generateSummary }    from '../../lib/services/aiSummary.js'
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()
 
-  const { property_id, owner_id, month, year, overwrite, host_context, regenerate_summary } = req.body
+  const { property_id, owner_id, month, year, overwrite, host_context, regenerate_summary, manual_payout_amount } = req.body
 
   if (!property_id || !owner_id || !month || !year) {
     return res.status(400).json({ error: 'property_id, owner_id, month, and year are required' })
@@ -80,12 +80,13 @@ export default async function handler(req, res) {
     owner_id,
     month:              m,
     year:               y,
-    status:             'draft',
-    ai_summary:         aiSummary,
-    manual_notes:       null,
-    generated_at:       now,
-    published_at:       null,
-    featured_review_id: featuredReviewId,
+    status:               'draft',
+    ai_summary:           aiSummary,
+    manual_notes:         null,
+    generated_at:         now,
+    published_at:         null,
+    featured_review_id:   featuredReviewId,
+    manual_payout_amount: manual_payout_amount != null ? parseFloat(manual_payout_amount) : null,
   }
 
   const { data: saved, error: saveErr } = await supabase

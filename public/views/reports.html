@@ -60,7 +60,7 @@
           <!-- Owner selector (filtered to property) -->
           <div class="form-group" x-show="form.property_id">
             <label class="form-label">Owner</label>
-            <select class="form-select" x-model="form.owner_id">
+            <select class="form-select" x-model="form.owner_id" @change="onOwnerChange()">
               <option value="">Select an owner...</option>
               <template x-for="o in ownersForProperty" :key="o.id">
                 <option :value="o.id" x-text="o.name + (o.ownership_pct < 100 ? ' (' + o.ownership_pct + '%)' : '')"></option>
@@ -96,6 +96,24 @@
                 </template>
               </select>
             </div>
+          </div>
+
+          <!-- Distribution override — applies to all owners -->
+          <div class="form-group" x-show="form.owner_id">
+            <label class="form-label">
+              Distribution override <span class="text-faint text-sm">(optional)</span>
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              class="form-input"
+              placeholder="Leave blank to use calculated amount"
+              x-model="form.manual_payout_amount"
+              style="max-width: 240px;"
+            >
+            <p class="text-faint text-sm" style="margin-top: var(--space-1);">
+              Leave blank = calculated amount &nbsp;·&nbsp; 0 = no distribution &nbsp;·&nbsp; any amount = override
+            </p>
           </div>
 
           <!-- Optional context for AI -->
@@ -305,12 +323,13 @@
       return {
         // Form state
         form: {
-          property_id:  '',
-          owner_id:     '',
-          month:        '',
-          year:         '',
-          host_context:        '',
-          regenerate_summary:  false,
+          property_id:          '',
+          owner_id:             '',
+          month:                '',
+          year:                 '',
+          host_context:         '',
+          regenerate_summary:   false,
+          manual_payout_amount: '',
         },
 
         // Data
@@ -362,21 +381,26 @@
         },
 
         async onPropertyChange() {
-          this.form.owner_id    = ''
-          this.ownersForProperty = []
-          this.draftReport      = null
+          this.form.owner_id         = ''
+          this.form.manual_payout_amount = ''
+          this.ownersForProperty     = []
+          this.draftReport           = null
           if (!this.form.property_id) return
 
           const res  = await fetch(`/api/owners?property=${this.form.property_id}`)
           const data = await res.json()
-          this.ownersForProperty = data || []
+          this.ownersForProperty = Array.isArray(data) ? data : []
           // Pre-select majority owner
           if (this.ownersForProperty.length === 1) {
             this.form.owner_id = this.ownersForProperty[0].id
           } else if (this.ownersForProperty.length > 1) {
-            const majority = this.ownersForProperty.reduce((a, b) => a.ownership_pct >= b.ownership_pct ? a : b)
-            this.form.owner_id = majority.id
+            this.form.owner_id = this.ownersForProperty.reduce((a, b) =>
+              a.ownership_pct >= b.ownership_pct ? a : b).id
           }
+        },
+
+        onOwnerChange() {
+          this.form.manual_payout_amount = ''
         },
 
         async generate(overwrite = false) {
@@ -400,8 +424,10 @@
                 month:        parseInt(this.form.month),
                 year:         parseInt(this.form.year),
                 overwrite:    overwrite || undefined,
-                host_context:       this.form.host_context || undefined,
-                regenerate_summary: regenerateSummary || undefined,
+                host_context:         this.form.host_context || undefined,
+                regenerate_summary:   regenerateSummary || undefined,
+                manual_payout_amount: this.form.manual_payout_amount !== ''
+                  ? parseFloat(this.form.manual_payout_amount) : undefined,
               }),
             })
 

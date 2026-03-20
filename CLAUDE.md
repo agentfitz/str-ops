@@ -279,19 +279,30 @@ e.g. `ops.bmf.llc/owner-reports/03-2026/michael-fitzgerald/hidden-hollow`
 9. **Coming Up** — next month's bookings: dates, nights, platform, expected payout.
 9. **Footer** — contact Brian / BMF branding
 
+### Hero cards (report viewer)
+- **Hero 1 — Gross Revenue**: always shows property revenue for the month
+- **Hero 2 — Total Holdings**: always shows combined account balance (`operating + reserves`). "Pending" if no balance entered yet. Never swaps based on distribution status.
+
+### Distribution banner
+Appears directly below the two heroes when `effective_payout > 0`. Shows: 💰 Distribution Issued — [Month Year] / $amount. Not shown when no distribution this month.
+
 ### Payout display — single vs. dual account
-- If `reserves_balance = 0`: show one "Operating Account Balance" line (combined total).
-- If `reserves_balance > 0`: show Operating + Reserves lines, then a "Combined Balance" subtotal, then deductions.
-- Zero payout message always uses "operating account balance" regardless of structure.
+- If `reserves_balance = 0`: show one "Operating Account Balance" line.
+- If `reserves_balance > 0`: show Operating + Reserves lines, then a "Total Holdings" subtotal, then deductions.
+- No distribution case shows "No distribution this month." as the total row (no warning box).
 
 ### Payout calculation
 - `combined_balance` = `operating_account_balance` + `reserves_account_balance`
-- `mgmt_fee` = `gross_revenue` × (`pm_commission_rate` / 100)  ← not yet extracted from account at report time
+- `mgmt_fee` = `gross_revenue` × (`pm_commission_rate` / 100)
 - `distributable` = `combined_balance` − `mgmt_fee` − `operating_minimum_balance`
-- Owner Payout = `MAX(0, distributable)` × (`ownership_pct` / 100)
+- `calculated_payout` = `MAX(0, distributable)` × (`ownership_pct` / 100) — prorated by ownership %
+- `effective_payout` = `manual_payout_amount ?? calculated_payout`
+  - `null` = use calculated (default for all owners)
+  - `0` = suppress distribution regardless of balance
+  - Any amount = override in either direction
 - Balances entered manually in Admin → Account Balance
-- `operating_minimum_balance` stored on `properties` table
-- For split-ownership: each owner's payout is prorated by their `ownership_pct`
+- `operating_minimum_balance` stored on `properties` table — **setting this very high is the correct way to configure a reserve-building owner** (e.g. $1,000,000 effectively holds all funds in the account)
+- For split-ownership: payout is prorated by `ownership_pct`
 
 ### Net Cash Flow calculation
 - Net Cash Flow = Gross Revenue + Management Fee amount + sum of all expenses
@@ -324,10 +335,12 @@ Stored in `properties.pm_commission_rate` (numeric, e.g. 16.00 = 16%).
 
 ### Data model
 - `properties.pm_commission_rate` — PM commission rate, e.g. 16.00 = 16%
-- `properties.operating_minimum_balance` — reserve kept in account; payout = closing_balance - this
+- `properties.operating_minimum_balance` — reserve kept in account; payout = closing_balance − mgmt_fee − this
 - `account_balances` table — month-end closing balance per property (entered via Admin page)
-- `owner_reports` table — draft/published state, ai_summary, manual_notes
+- `owner_reports.manual_payout_amount` — optional override: null = use formula, 0 = suppress, any amount = override
+- `owner_reports` table — draft/published state, ai_summary, manual_notes, manual_payout_amount, featured_review_id
 - `expenses` table — Baselane import; used for financials waterfall
+- `reviews` table — guest reviews seeded manually; one randomly stamped per report at generation time (`featured_review_id`)
 
 ---
 

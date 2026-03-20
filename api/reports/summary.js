@@ -36,10 +36,10 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: err.message })
   }
 
-  // Fetch saved report row (ai_summary, status, featured_review_id, etc.)
+  // Fetch saved report row (ai_summary, status, featured_review_id, manual_payout_amount, etc.)
   const { data: savedReport } = await supabase
     .from('owner_reports')
-    .select('id, status, ai_summary, manual_notes, generated_at, published_at, featured_review_id')
+    .select('id, status, ai_summary, manual_notes, generated_at, published_at, featured_review_id, manual_payout_amount')
     .eq('property_id', property)
     .eq('owner_id', ownerRow.id)
     .eq('month', parseInt(month))
@@ -57,9 +57,22 @@ export default async function handler(req, res) {
     featuredReview = reviewRow || null
   }
 
+  // Resolve payout fields
+  // manual_payout_amount overrides in both directions (force higher or suppress lower)
+  // null = use calculated value
+  const calculatedPayout   = reportData.account_balance.calculated_payout
+  const manualPayoutAmount = savedReport?.manual_payout_amount != null
+    ? parseFloat(savedReport.manual_payout_amount) : null
+  const effectivePayout    = manualPayoutAmount ?? calculatedPayout
+  const totalHoldings      = reportData.account_balance.combined_balance
+
   return res.status(200).json({
     ...reportData,
-    report:          savedReport || null,
-    featured_review: featuredReview,
+    report:               savedReport || null,
+    featured_review:      featuredReview,
+    manual_payout_amount: manualPayoutAmount,
+    calculated_payout:    calculatedPayout,
+    effective_payout:     effectivePayout,
+    total_holdings:       totalHoldings,
   })
 }

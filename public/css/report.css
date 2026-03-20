@@ -105,6 +105,7 @@
   text-align: center;
 }
 
+
 .report-hero-card__label {
   font-family: var(--font-mono);
   font-size: var(--text-xs);
@@ -167,6 +168,38 @@
   color: var(--color-text-muted);
 }
 
+/* ── Distribution banner ─────────────────────────────────────── */
+.report-distribution-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-5);
+  margin-top: var(--space-3);
+  border-left: 3px solid var(--color-accent);
+  border-radius: var(--border-radius);
+  background: #cff9d8;
+}
+
+.report-distribution-banner__icon {
+  font-size: var(--text-lg);
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.report-distribution-banner__text {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  flex: 1;
+}
+
+.report-distribution-banner__amount {
+  font-family: var(--font-mono);
+  font-size: var(--text-base);
+  font-weight: 500;
+  color: var(--color-accent);
+}
+
 /* ── Sections ────────────────────────────────────────────────── */
 .report-container.report-container--sections {
   padding-top: 0;
@@ -200,7 +233,7 @@
 }
 
 .report-section__pill--green {
-  background: #D4EDDA;
+  background: #cff9d8;
   color: #1D4A35;
 }
 

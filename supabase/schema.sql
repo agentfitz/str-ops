@@ -117,13 +117,14 @@ create table owner_reports (
   month           int not null,             -- 1–12
   year            int not null,
   status          text default 'draft',     -- 'draft', 'published'
-  ai_summary      text,                     -- Claude-generated, editable
-  manual_notes    text,                     -- host's own notes
-  generated_at    timestamptz,
-  published_at    timestamptz,
-  created_at      timestamptz default now(),
+  ai_summary            text,                     -- Claude-generated, editable
+  manual_notes          text,                     -- host's own notes
+  manual_payout_amount  numeric(10,2),            -- on_demand: amount distributed this month (null = no distribution)
+  generated_at          timestamptz,
+  published_at          timestamptz,
+  created_at            timestamptz default now(),
   unique(property_id, owner_id, month, year),
-  featured_review_id  uuid references reviews(id)
+  featured_review_id    uuid references reviews(id)
 );
 
 -- ── Indexes ───────────────────────────────────────────────────

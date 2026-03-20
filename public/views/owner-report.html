@@ -107,10 +107,11 @@
           <p class="report-hero-card__period" x-text="formatMonthYear(data?.month, data?.year)"></p>
         </div>
 
-        <div class="report-hero-card">
-          <p class="report-hero-card__label">Owner Payout</p>
+        <!-- Hero 2: always Total Holdings -->
+        <div class="report-hero-card report-hero-card--green">
+          <p class="report-hero-card__label">Total Holdings</p>
           <template x-if="data?.account_balance?.has_balance">
-            <p class="report-hero-card__amount" x-text="fmt(data?.account_balance?.owner_payout)"></p>
+            <p class="report-hero-card__amount" x-text="fmt(data?.total_holdings)"></p>
           </template>
           <template x-if="!data?.account_balance?.has_balance">
             <p class="report-hero-card__amount report-hero-card__amount--pending">Pending</p>
@@ -118,6 +119,17 @@
           <p class="report-hero-card__period" x-text="formatMonthYear(data?.month, data?.year)"></p>
         </div>
 
+      </div>
+    </div>
+
+    <!-- ── Distribution Banner ────────────────────────────────── -->
+    <div class="report-container" style="padding-top: 0; padding-bottom: 0;">
+      <div class="report-distribution-banner" x-show="data?.effective_payout > 0">
+        <span class="report-distribution-banner__icon">💰</span>
+        <span class="report-distribution-banner__text">
+          Distribution Issued — <span x-text="formatMonthYear(data?.month, data?.year)"></span>
+        </span>
+        <span class="report-distribution-banner__amount" x-text="fmt(data?.effective_payout)"></span>
       </div>
     </div>
 
@@ -212,8 +224,8 @@
         <template x-if="data?.account_balance?.has_balance">
           <div>
             <div class="report-financials">
-              <!-- Dual account: checking + savings → combined subtotal -->
-              <!-- Dual account: operating + reserves → combined subtotal -->
+
+              <!-- Dual account: operating + reserves → Total Holdings subtotal -->
               <template x-if="data?.account_balance?.reserves_balance > 0">
                 <div>
                   <div class="report-financials__row">
@@ -225,7 +237,7 @@
                     <span class="report-financials__amount" x-text="fmt(data?.account_balance?.reserves_balance)"></span>
                   </div>
                   <div class="report-financials__row report-financials__row--subtotal">
-                    <span>Combined Balance</span>
+                    <span>Total Holdings</span>
                     <span class="report-financials__amount" x-text="fmt(data?.account_balance?.combined_balance)"></span>
                   </div>
                 </div>
@@ -239,6 +251,7 @@
                 </div>
               </template>
 
+              <!-- Deductions -->
               <div class="report-financials__row" x-show="data?.property?.pm_commission_rate > 0">
                 <span>Management Fee (deducted)</span>
                 <span class="report-financials__amount" x-text="fmtNeg(data?.account_balance?.mgmt_fee_deduction)"></span>
@@ -254,24 +267,19 @@
                 <span class="report-financials__amount" x-text="fmt(data?.account_balance?.property_payout)"></span>
               </div>
 
-              <div class="report-financials__row report-financials__row--total">
-                <span>Owner Payout</span>
-                <span class="report-financials__amount" x-text="fmt(data?.account_balance?.owner_payout)"></span>
-              </div>
-            </div>
+              <!-- Owner Distribution total -->
+              <template x-if="data?.effective_payout > 0">
+                <div class="report-financials__row report-financials__row--total">
+                  <span>Owner Distribution</span>
+                  <span class="report-financials__amount" x-text="fmt(data?.effective_payout)"></span>
+                </div>
+              </template>
+              <template x-if="!(data?.effective_payout > 0)">
+                <div class="report-financials__row report-financials__row--total">
+                  <span style="color: var(--color-text-muted); font-size: var(--text-base);">No distribution this month.</span>
+                </div>
+              </template>
 
-            <!-- Zero payout explanation -->
-            <div x-show="data?.account_balance?.owner_payout === 0" style="
-              margin-top: var(--space-4);
-              background: var(--color-warning-bg);
-              border-radius: var(--border-radius);
-              padding: var(--space-4);
-            ">
-              <p style="font-family: var(--font-body); font-size: var(--text-sm); color: var(--color-warning);">
-                The operating account balance of <strong x-text="fmt(data?.account_balance?.combined_balance)"></strong>
-                is below the <strong x-text="fmt(data?.account_balance?.operating_minimum)"></strong> operating minimum after management fees.
-                No distribution this month.
-              </p>
             </div>
           </div>
         </template>
