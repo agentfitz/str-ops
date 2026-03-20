@@ -15,7 +15,7 @@
     {
       "source": "/",
       "has": [{ "type": "host", "value": "ops.bmf.llc" }],
-      "destination": "/index"
+      "destination": "/api/page?path=index"
     },
     {
       "source": "/owner-reports/(.*)",
@@ -25,7 +25,7 @@
     {
       "source": "/(.*)",
       "has": [{ "type": "host", "value": "ops.bmf.llc" }],
-      "destination": "/views/$1"
+      "destination": "/api/page?path=$1"
     },
     { "source": "/api/(.*)", "destination": "/api/$1" }
   ],

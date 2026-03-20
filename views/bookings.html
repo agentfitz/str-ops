@@ -57,18 +57,17 @@
       .chart-wrap { height: 220px; }
     }
   </style>
-  <script src="/js/util-nav.js"></script>
 </head>
 <body>
 
   <!-- Utility bar -->
-  <div class="util-nav" x-data="utilNav()">
+  <div class="util-nav">
     <div class="util-nav__inner">
       <span>BMF Enterprises · Internal Use Only</span>
       <span class="util-nav__right">
         <a href="https://stay.bmf.llc" target="_blank" rel="noopener" class="util-nav__link">stay.bmf.llc ↗</a>
         <span class="util-nav__sep">·</span>
-        <span x-text="email"></span>
+        <span class="util-nav__email">{{USER_EMAIL}}</span>
         <span class="util-nav__sep">·</span>
         <a href="/api/auth/logout" class="util-nav__link">Logout</a>
       </span>

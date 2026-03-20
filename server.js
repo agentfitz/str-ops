@@ -7,6 +7,12 @@ import fs         from 'fs'
 import path       from 'path'
 import { fileURLToPath } from 'url'
 import { requireAuth }   from './lib/requireAuth.js'
+import { verifyToken }  from './lib/jwt.js'
+
+function getCookie(header, name) {
+  const match = (header || '').match(new RegExp(`(?:^|;\\s*)${name}=([^;]*)`))
+  return match ? decodeURIComponent(match[1]) : null
+}
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const PORT = 3000
@@ -51,14 +57,26 @@ app.all('/api/*path', async (req, res) => {
   }
 })
 
-// ── Static files (cleanUrls — no .html extension needed) ─────
+// ── Protected HTML pages — served from views/ with email injection ────────
+app.use(async (req, res, next) => {
+  if (path.extname(req.path)) return next() // skip asset requests
+
+  // Map request path to views/ file
+  const pageName = req.path === '/' ? 'index' : req.path.replace(/^\/views\//, '').replace(/^\//, '')
+  const viewFile = path.join(__dirname, 'views', `${pageName}.html`)
+
+  if (!fs.existsSync(viewFile)) return next()
+
+  const token = getCookie(req.headers.cookie, 'bmf-auth')
+  const user = token ? await verifyToken(token) : null
+  const html = fs.readFileSync(viewFile, 'utf8').replace('{{USER_EMAIL}}', user?.email ?? '')
+  res.setHeader('Content-Type', 'text/html; charset=utf-8')
+  return res.send(html)
+})
+
+// ── Other static files (CSS, JS, images) ─────────────────────
 app.use((req, res, next) => {
-  let filePath = req.path === '/'
-    ? path.join(__dirname, 'public', 'index.html')
-    : path.join(__dirname, 'public', req.path)
-
-  if (!path.extname(filePath)) filePath += '.html'
-
+  const filePath = path.join(__dirname, 'public', req.path)
   if (fs.existsSync(filePath)) return res.sendFile(filePath)
   next()
 })
