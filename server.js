@@ -1,125 +1,113 @@
 // server.js — local dev server
-// Serves static files from /public and API routes from /api
 // Usage: node server.js
 
 import 'dotenv/config'
-import http from 'http'
-import fs from 'fs'
-import path from 'path'
+import express      from 'express'
+import session      from 'express-session'
+import fs           from 'fs'
+import path         from 'path'
 import { fileURLToPath } from 'url'
+import passport          from './lib/auth.js'
+import { requireAuth }   from './lib/requireAuth.js'
+import { getSessionStore } from './lib/sessionStore.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const PORT = 3000
+const app = express()
 
-const MIME_TYPES = {
-  '.html': 'text/html',
-  '.css':  'text/css',
-  '.js':   'application/javascript',
-  '.json': 'application/json',
-  '.png':  'image/png',
-  '.ico':  'image/x-icon',
-}
+// ── Body parsing ─────────────────────────────────────────────
+app.use(express.json())
+app.use(express.urlencoded({ extended: false }))
 
-// Dynamically load API route handlers
+// ── Session + Passport ────────────────────────────────────────
+app.use(session({
+  store:             getSessionStore(),
+  secret:            process.env.SESSION_SECRET || 'dev-secret-change-me',
+  resave:            false,
+  saveUninitialized: false,
+  cookie:            { secure: false, sameSite: 'lax', maxAge: 30 * 24 * 60 * 60 * 1000 },
+}))
+app.use(passport.initialize())
+app.use(passport.session())
+
+// ── Auth routes (public) ──────────────────────────────────────
+app.get('/api/auth/google',
+  passport.authenticate('google', { scope: ['email', 'profile'] })
+)
+
+app.get('/api/auth/callback/google',
+  passport.authenticate('google', {
+    successRedirect: '/',
+    failureRedirect: '/login?error=unauthorized',
+  })
+)
+
+app.get('/api/auth/logout', (req, res) => {
+  req.logout(() => {})
+  req.session.destroy()
+  res.redirect('/login')
+})
+
+// ── Login page (public) ───────────────────────────────────────
+app.get('/login', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'login.html'))
+})
+
+// ── Owner report viewer (public — shareable links) ────────────
+app.get('/views/owner-report', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'views', 'owner-report.html'))
+})
+app.get('/owner-reports/*path', (_req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'views', 'owner-report.html'))
+})
+
+// ── Auth wall — everything below requires login ───────────────
+app.use(requireAuth)
+
+// ── API routes (dynamic, cache-busted) ───────────────────────
+app.all('/api/*path', async (req, res) => {
+  const handler = await getApiHandler(req.path)
+  if (!handler) return res.status(404).json({ error: `No handler for ${req.path}` })
+  try {
+    await handler(req, res)
+  } catch (err) {
+    console.error(`API error [${req.path}]:`, err)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// ── Static files (cleanUrls — no .html extension needed) ─────
+app.use((req, res, next) => {
+  let filePath = req.path === '/'
+    ? path.join(__dirname, 'public', 'index.html')
+    : path.join(__dirname, 'public', req.path)
+
+  if (!path.extname(filePath)) filePath += '.html'
+
+  if (fs.existsSync(filePath)) return res.sendFile(filePath)
+  next()
+})
+
+app.use((req, res) => res.status(404).send('Not found'))
+
+// ── Dynamic API handler loader ────────────────────────────────
 async function getApiHandler(urlPath) {
-  // /api/metrics/summary → api/metrics/summary.js
-  const relative = urlPath.replace(/^\//, '') // strip leading slash
+  const relative = urlPath.replace(/^\//, '')
   const candidates = [
     path.join(__dirname, `${relative}.js`),
     path.join(__dirname, relative, 'index.js'),
   ]
   for (const candidate of candidates) {
     if (fs.existsSync(candidate)) {
-      const mod = await import(`${candidate}?t=${Date.now()}`) // bust cache
+      const mod = await import(`${candidate}?t=${Date.now()}`)
       return mod.default
     }
   }
   return null
 }
 
-function parseQuery(urlStr) {
-  const u = new URL(urlStr, 'http://localhost')
-  const query = {}
-  u.searchParams.forEach((v, k) => { query[k] = v })
-  return { pathname: u.pathname, query }
-}
-
-async function readBody(req) {
-  return new Promise((resolve) => {
-    const chunks = []
-    req.on('data', c => chunks.push(c))
-    req.on('end', () => resolve(Buffer.concat(chunks)))
-  })
-}
-
-const server = http.createServer(async (req, res) => {
-  const { pathname, query } = parseQuery(req.url)
-
-  // ── API routes ──────────────────────────────────────────────
-  if (pathname.startsWith('/api/')) {
-    const handler = await getApiHandler(pathname)
-    if (!handler) {
-      res.writeHead(404, { 'Content-Type': 'application/json' })
-      return res.end(JSON.stringify({ error: `No handler for ${pathname}` }))
-    }
-
-    // Build a minimal req/res compatible with our Vercel-style handlers
-    req.query = query
-    if (req.method === 'POST' || req.method === 'PUT') {
-      const raw = await readBody(req)
-      const contentType = req.headers['content-type'] || ''
-      if (contentType.includes('application/json')) {
-        try { req.body = JSON.parse(raw.toString()) } catch { req.body = {} }
-      } else {
-        req.body = raw
-      }
-    }
-
-    const mockRes = {
-      statusCode: 200,
-      headers: {},
-      status(code) { this.statusCode = code; return this },
-      setHeader(k, v) { this.headers[k] = v; return this },
-      end(body) {
-        res.writeHead(this.statusCode, {
-          'Content-Type': 'application/json',
-          ...this.headers,
-        })
-        res.end(body)
-      },
-      json(data) { this.end(JSON.stringify(data)) },
-    }
-
-    try {
-      await handler(req, mockRes)
-    } catch (err) {
-      console.error(`API error [${pathname}]:`, err)
-      res.writeHead(500, { 'Content-Type': 'application/json' })
-      res.end(JSON.stringify({ error: err.message }))
-    }
-    return
-  }
-
-  // ── Static files ────────────────────────────────────────────
-  let filePath = pathname === '/'
-    ? path.join(__dirname, 'public', 'index.html')
-    : path.join(__dirname, 'public', pathname)
-
-  // If no extension, try .html
-  if (!path.extname(filePath)) filePath += '.html'
-
-  if (!fs.existsSync(filePath)) {
-    res.writeHead(404)
-    return res.end('Not found')
-  }
-
-  const ext = path.extname(filePath)
-  res.writeHead(200, { 'Content-Type': MIME_TYPES[ext] || 'text/plain' })
-  fs.createReadStream(filePath).pipe(res)
-})
-
-server.listen(PORT, () => {
+app.listen(PORT, () => {
   console.log(`\n  STR Ops running at http://localhost:${PORT}\n`)
   console.log(`  Dashboard → http://localhost:${PORT}/`)
-  console.log(`  Admin     → http://localhost:${PORT}/views/admin.html\n`)
+  console.log(`  Admin     → http://localhost:${PORT}/views/admin\n`)
 })

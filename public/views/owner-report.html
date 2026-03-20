@@ -147,26 +147,60 @@
         <p class="report-section__heading">
           <span x-text="formatMonthYear(data?.month, data?.year)"></span> · Occupancy
         </p>
-        <p class="report-occupancy__stat">
-          <span x-text="data?.occupancy?.revenue_nights"></span>
-          <span style="font-size: var(--text-xl); font-weight: 400;"> / </span>
-          <span x-text="data?.occupancy?.available_nights"></span>
-          <span style="font-size: var(--text-xl); font-weight: 400; font-family: var(--font-body);"> nights</span>
-        </p>
-        <p class="report-occupancy__detail">
-          <span x-text="data?.occupancy?.revenue_nights"></span> revenue nights
-          <template x-if="data?.occupancy?.owner_stay_nights > 0">
-            <span>
-              &nbsp;·&nbsp;
-              <span x-text="data?.occupancy?.owner_stay_nights"></span> owner stay
-              <template x-if="data?.occupancy?.owner_stay_dates && data?.occupancy?.owner_stay_dates.length > 0">
-                <span>(<span x-text="formatOwnerStayDates(data?.occupancy?.owner_stay_dates)"></span>)</span>
+        <div class="report-occupancy__layout">
+          <!-- Left: text metrics -->
+          <div class="report-occupancy__metrics">
+            <p class="report-occupancy__stat">
+              <span x-text="(data?.occupancy?.revenue_nights || 0) + (data?.occupancy?.owner_stay_nights || 0)"></span>
+              <span style="font-size: var(--text-xl); font-weight: 400;"> / </span>
+              <span x-text="data?.occupancy?.available_nights"></span>
+              <span style="font-size: var(--text-xl); font-weight: 400; font-family: var(--font-body);"> nights</span>
+            </p>
+            <p class="report-occupancy__detail">
+              <span x-text="data?.occupancy?.revenue_nights"></span> revenue nights<br>
+              <template x-if="data?.occupancy?.owner_stay_nights > 0">
+                <span>
+                  <span x-text="data?.occupancy?.owner_stay_nights"></span> owner stay
+                  <template x-if="data?.occupancy?.owner_stay_dates && data?.occupancy?.owner_stay_dates.length > 0">
+                    <span>(<span x-text="formatOwnerStayDates(data?.occupancy?.owner_stay_dates)"></span>)</span>
+                  </template>
+                  <br>
+                </span>
               </template>
-            </span>
-          </template>
-          <br>
-          <span x-text="Math.round((data?.occupancy?.pct || 0) * 100)"></span>% occupancy rate
-        </p>
+              <template x-if="data?.occupancy?.owner_stay_nights > 0">
+                <span><span x-text="Math.round(((data?.occupancy?.revenue_nights + data?.occupancy?.owner_stay_nights) / (data?.occupancy?.available_nights || 1)) * 100)"></span>% total occupancy rate<br></span>
+              </template>
+              <span x-text="Math.round((data?.occupancy?.pct || 0) * 100)"></span>% revenue occupancy rate
+            </p>
+          </div>
+          <!-- Right: calendar grid -->
+          <div class="report-occupancy__calendar">
+            <div class="report-cal__header">
+              <div class="report-cal__dow">S</div>
+              <div class="report-cal__dow">M</div>
+              <div class="report-cal__dow">T</div>
+              <div class="report-cal__dow">W</div>
+              <div class="report-cal__dow">T</div>
+              <div class="report-cal__dow">F</div>
+              <div class="report-cal__dow">S</div>
+            </div>
+            <div class="report-cal__grid">
+              <template x-for="cell in calendarCells" :key="cell.key">
+                <div
+                  class="report-cal__cell"
+                  :class="{
+                    'report-cal__cell--revenue': cell.status === 'revenue',
+                    'report-cal__cell--owner':   cell.status === 'owner',
+                    'report-cal__cell--vacant':  cell.status === 'vacant',
+                    'report-cal__cell--filler':  cell.filler,
+                    'report-cal__cell--today':   cell.isToday,
+                  }"
+                  x-text="cell.filler ? '' : cell.day"
+                ></div>
+              </template>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- ── Financials ─────────────────────────────────────── -->
@@ -200,7 +234,8 @@
           </template>
 
           <!-- Net Cash Flow -->
-          <div class="report-financials__row report-financials__row--total">
+          <div class="report-financials__row report-financials__row--total"
+               :class="{'report-financials__row--negative': (data?.net_cash_flow || 0) < 0}">
             <span>Net Cash Flow</span>
             <span class="report-financials__amount" x-text="fmt(data?.net_cash_flow)"></span>
           </div>
@@ -236,7 +271,7 @@
                     <span>Reserves Account Balance</span>
                     <span class="report-financials__amount" x-text="fmt(data?.account_balance?.reserves_balance)"></span>
                   </div>
-                  <div class="report-financials__row report-financials__row--subtotal">
+                  <div class="report-financials__row report-financials__row--wash">
                     <span>Total Holdings</span>
                     <span class="report-financials__amount" x-text="fmt(data?.account_balance?.combined_balance)"></span>
                   </div>
@@ -252,19 +287,9 @@
               </template>
 
               <!-- Deductions -->
-              <div class="report-financials__row" x-show="data?.property?.pm_commission_rate > 0">
-                <span>Management Fee (deducted)</span>
-                <span class="report-financials__amount" x-text="fmtNeg(data?.account_balance?.mgmt_fee_deduction)"></span>
-              </div>
               <div class="report-financials__row">
                 <span>Operating Minimum Reserve</span>
                 <span class="report-financials__amount" x-text="fmtNeg(data?.account_balance?.operating_minimum)"></span>
-              </div>
-
-              <!-- Split ownership proration -->
-              <div class="report-financials__row" x-show="data?.owner?.ownership_pct < 100">
-                <span>Property Payout Pool &times; <span x-text="data?.owner?.ownership_pct"></span>% ownership</span>
-                <span class="report-financials__amount" x-text="fmt(data?.account_balance?.property_payout)"></span>
               </div>
 
               <!-- Owner Distribution total -->
@@ -275,9 +300,9 @@
                 </div>
               </template>
               <template x-if="!(data?.effective_payout > 0)">
-                <div class="report-financials__row report-financials__row--total">
-                  <span style="color: var(--color-text-muted); font-size: var(--text-base);">No distribution this month.</span>
-                </div>
+                <p style="font-family: var(--font-body); font-size: 0.9375rem; color: var(--color-text-faint); font-style: italic; margin-top: var(--space-2);">
+                  No distribution this month.
+                </p>
               </template>
 
             </div>
@@ -410,6 +435,7 @@
         data:            null,
         report:          null,
         featured_review: null,
+        calendarCells:   [],
 
         async init() {
           const params = parseReportParams()
@@ -430,6 +456,7 @@
             this.data            = json
             this.report          = json.report
             this.featured_review = json.featured_review || null
+            this.calendarCells   = buildOccupancyCalendar(json.month, json.year, json.currentBookings)
 
             if (json.property && json.owner) {
               document.title = `${json.property.display_name} — ${MONTH_NAMES[json.month]} ${json.year} — Owner Report`
@@ -491,6 +518,45 @@
           return map[platform.toLowerCase()] || platform
         },
       }
+    }
+
+    function buildOccupancyCalendar(month, year, bookings) {
+      if (!month || !year) return []
+
+      // Build a map: 'YYYY-MM-DD' → status ('revenue' | 'owner')
+      const dayStatus = {}
+      for (const b of (bookings || [])) {
+        if (!b.checkin_date || !b.checkout_date) continue
+        const status = b.stay_type === 'Revenue' ? 'revenue' : 'owner'
+        let cur = new Date(b.checkin_date + 'T00:00:00')
+        const out = new Date(b.checkout_date + 'T00:00:00')
+        while (cur < out) {
+          const iso = cur.toISOString().slice(0, 10)
+          if (!dayStatus[iso] || status === 'revenue') dayStatus[iso] = status
+          cur.setDate(cur.getDate() + 1)
+        }
+      }
+
+      const todayStr    = new Date().toISOString().slice(0, 10)
+      const firstDay    = new Date(year, month - 1, 1).getDay() // 0=Sun
+      const daysInMonth = new Date(year, month, 0).getDate()
+
+      const cells = []
+      let key = 0
+
+      for (let i = 0; i < firstDay; i++) cells.push({ key: key++, filler: true })
+
+      for (let d = 1; d <= daysInMonth; d++) {
+        const iso = `${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`
+        cells.push({ key: key++, day: d, filler: false, status: dayStatus[iso] || 'vacant', isToday: iso === todayStr })
+      }
+
+      const remainder = cells.length % 7
+      if (remainder !== 0) {
+        for (let i = 0; i < 7 - remainder; i++) cells.push({ key: key++, filler: true })
+      }
+
+      return cells
     }
 
     const COLLAPSE_THRESHOLD = 280

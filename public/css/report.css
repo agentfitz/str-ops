@@ -177,7 +177,7 @@
   margin-top: var(--space-3);
   border-left: 3px solid var(--color-accent);
   border-radius: var(--border-radius);
-  background: #cff9d8;
+  background: #dbf9e1;
 }
 
 .report-distribution-banner__icon {
@@ -233,7 +233,7 @@
 }
 
 .report-section__pill--green {
-  background: #cff9d8;
+  background: #dbf9e1;
   color: #1D4A35;
 }
 
@@ -251,6 +251,17 @@
 }
 
 /* ── Occupancy snapshot ──────────────────────────────────────── */
+.report-occupancy__layout {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--space-8);
+  align-items: center;
+}
+
+.report-occupancy__metrics {
+  min-width: 0;
+}
+
 .report-occupancy__stat {
   font-family: var(--font-mono);
   font-size: var(--text-3xl);
@@ -266,44 +277,155 @@
   line-height: 1.7;
 }
 
+/* ── Occupancy calendar grid ─────────────────────────────────── */
+.report-occupancy__calendar {
+  flex-shrink: 0;
+}
+
+.report-cal__header {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  margin-bottom: 3px;
+}
+
+.report-cal__dow {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-faint);
+  text-align: center;
+  padding-bottom: 5px;
+}
+
+.report-cal__grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+}
+
+.report-cal__cell {
+  width: 42px;
+  height: 42px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 500;
+  position: relative;
+}
+
+.report-cal__cell--vacant {
+  background: #F0EDE8;
+  color: var(--color-text-faint);
+}
+
+.report-cal__cell--revenue {
+  background: #dbf9e1;
+  color: #1D4A35;
+}
+
+.report-cal__cell--owner {
+  background: #b5d9c8;
+  color: #1D4A35;
+}
+
+.report-cal__cell--filler {
+  background: transparent;
+  pointer-events: none;
+}
+
+.report-cal__cell--today::after {
+  content: '';
+  position: absolute;
+  bottom: 3px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.5;
+}
+
+@media (max-width: 540px) {
+  .report-occupancy__layout {
+    grid-template-columns: 1fr;
+  }
+
+  .report-cal__cell {
+    width: 100%;
+    height: 46px;
+  }
+}
+
 /* ── Financials ──────────────────────────────────────────────── */
 .report-financials {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-3);
 }
 
+/* Line items — supporting cast */
 .report-financials__row {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
   font-family: var(--font-body);
-  font-size: var(--text-base);
+  font-size: 0.9375rem;
   color: var(--color-text-muted);
-}
-
-.report-financials__row--subtotal {
-  border-top: 1px solid var(--color-border);
-  padding-top: var(--space-2);
-  margin-bottom: var(--space-2);
-  font-weight: 500;
-}
-
-.report-financials__row--total {
-  color: var(--color-accent);
-  font-size: var(--text-xl);
-  padding-top: var(--space-4);
-  border-top: 1px solid var(--color-border);
 }
 
 .report-financials__amount {
   font-family: var(--font-mono);
-  font-size: var(--text-base);
+  font-size: 0.9375rem;
+  color: var(--color-text-muted);
+}
+
+/* Level 1 subtotal — Total Holdings (dual-account only) */
+/* Softer wash, same text size as line items, DM Sans normal weight */
+.report-financials__row--wash {
+  background: #EDEAE4;
+  border-top: 1px dotted var(--color-border-dark);
+  padding: var(--space-3) var(--space-4);
+  margin-top: var(--space-3);
+  font-family: var(--font-body);
+  font-size: 0.9375rem;
+  font-weight: 400;
+  color: var(--color-text);
+}
+
+.report-financials__row--wash .report-financials__amount {
+  font-family: var(--font-mono);
+  font-size: 0.9375rem;
+  color: var(--color-text);
+}
+
+/* Level 2 final total — Net Cash Flow, Owner Distribution */
+/* Stronger wash, Playfair Display, dominant size */
+.report-financials__row--total {
+  background: #E4DED6;
+  border-top: 1px solid var(--color-border-dark);
+  padding: var(--space-3) var(--space-4);
+  margin-top: var(--space-3);
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 500;
+  color: var(--color-text);
 }
 
 .report-financials__row--total .report-financials__amount {
-  font-size: var(--text-2xl);
-  font-weight: 500;
+  font-family: var(--font-mono);
+  font-size: var(--text-xl);
+  font-weight: 400;
+  color: var(--color-text);
+}
+
+/* Negative total (Net Cash Flow < 0) */
+.report-financials__row--total.report-financials__row--negative .report-financials__amount {
+  color: #92400e;
 }
 
 .report-financials__badge {
@@ -354,6 +476,10 @@
 .report-table td.mono {
   font-family: var(--font-mono);
   font-size: var(--text-sm);
+}
+
+.report-table tr:last-child td {
+  border-bottom: none;
 }
 
 .report-table__empty {

@@ -84,7 +84,8 @@ Seed data (correct state):
 - Hidden Hollow: Brian 49%, Michael 51%
 
 ## Tech Stack
-- **Backend**: Node.js (ESM), no framework — `server.js` serves static files and API routes locally
+- **Backend**: Node.js (ESM) — `server.js` uses **Express** for local dev, serving static files and API routes
+- **Auth**: Passport.js + Google OAuth 2.0 + express-session. `lib/auth.js` (strategy), `lib/requireAuth.js` (middleware). All ops routes protected; `/login`, `/api/auth/*`, and owner report viewer are public.
 - **API style**: Vercel serverless handler pattern (`export default async function handler(req, res)`) — works both locally and deployed to Vercel
 - **Database**: Supabase (Postgres) — `lib/supabase.js` for the client
 - **Frontend**: Vanilla HTML + Alpine.js for reactivity, custom CSS design system (tokens, base, nav, card, table)
@@ -179,6 +180,10 @@ vercel.json                 # Vercel deployment config
 SUPABASE_URL=
 SUPABASE_SERVICE_KEY=
 ANTHROPIC_API_KEY=
+SESSION_SECRET=        ← long random hex string (node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+ALLOWED_EMAILS=        ← comma-separated list of authorized Google accounts
 ```
 
 ## Views / Pages
@@ -271,7 +276,7 @@ e.g. `ops.bmf.llc/owner-reports/03-2026/michael-fitzgerald/hidden-hollow`
 1. **Header** — property name, owner name, month/year + YTD gross revenue
 2. **Two hero cards** — Gross Revenue (left) + Owner Payout (right, "Pending" if no balance entered yet)
 3. **Executive Summary** — AI-generated (Claude API), only shown if `ai_summary` exists. Editable before publishing.
-4. **Occupancy Snapshot** — "X of Y nights · % rate · owner stay nights + dates"
+4. **Occupancy Snapshot** — Two-column layout: text metrics (X of Y nights, occupancy %, owner stay) on the left; a 7-column calendar grid on the right. Grid cells: revenue nights = dark green (#2C5F4A), owner/comp stays = muted green, vacant = warm off-white (#F0EDE8), today = dot indicator. Derived from existing `currentBookings` data, no extra API call. Stacks vertically on mobile.
 5. **Financials waterfall** — Gross Revenue → Management Fee (est. badge if estimated) → dynamic expense categories → Net Cash Flow total
 6. **Owner Payout section** — Closing Balance − Operating Minimum → Owner Payout. Shows proration row for split ownership. Warning if payout = 0.
 7. **Bookings This Month** — table: dates, platform, nights, payout. Comp stays show "Comp".
