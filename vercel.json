@@ -7,7 +7,7 @@
     {
       "source": "/",
       "has": [{ "type": "host", "value": "stay.bmf.llc" }],
-      "destination": "/book-direct/index"
+      "destination": "/book-direct/index.html"
     },
     {
       "source": "/(.*)",
@@ -17,7 +17,7 @@
     {
       "source": "/",
       "has": [{ "type": "host", "value": "ops.bmf.llc" }],
-      "destination": "/index"
+      "destination": "/index.html"
     },
     {
       "source": "/owner-reports/(.*)",

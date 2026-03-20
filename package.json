@@ -20,6 +20,7 @@
     "passport-google-oauth20": "^2.0.0"
   },
   "devDependencies": {
+    "next": "^16.2.0",
     "vercel": "^50.33.1"
   }
 }

@@ -1,7 +1,8 @@
 // middleware.js — Vercel Edge Middleware
 // Self-contained (no local imports) so Vercel bundles it correctly for non-Next.js projects.
 // Intercepts every request at CDN level before any file is served.
-// Returning undefined = pass through. Returning Response.redirect() = intercept.
+// NextResponse.next() = pass through (continues rewrite pipeline). Response.redirect() = intercept.
+import { NextResponse } from 'next/server'
 
 const PUBLIC_PATHS = [
   '/login',
@@ -55,13 +56,13 @@ export default async function middleware(request) {
 
   // stay.bmf.llc is fully public — no auth check
   if (host.includes('stay.bmf.llc')) {
-    return
+    return NextResponse.next()
   }
 
   const { pathname } = new URL(request.url)
 
   if (PUBLIC_PATHS.some(p => pathname === p || pathname.startsWith(p))) {
-    return // pass through
+    return NextResponse.next()
   }
 
   const token = getCookie(request.headers.get('cookie'), 'bmf-auth')
@@ -75,6 +76,7 @@ export default async function middleware(request) {
   }
 
   // authenticated — pass through
+  return NextResponse.next()
 }
 
 export const config = { matcher: '/:path*' }
