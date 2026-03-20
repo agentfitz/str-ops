@@ -105,8 +105,9 @@ export default async function handler(req, res) {
   })).sort((a, b) => b.grossRevenue - a.grossRevenue)
 
   // Portfolio totals
+  // propertiesData is already filtered to active=true by the query above (kenview excluded)
   const activePropertyCount = propertyFilter === 'all'
-    ? (propertiesData?.filter(p => p.active).length || 1)
+    ? (propertiesData?.length || 1)
     : 1
   const totalAvailableNights = baseNights * activePropertyCount
 
