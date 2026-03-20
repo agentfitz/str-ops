@@ -54,9 +54,14 @@ async function verifyToken(token) {
 export default async function middleware(request) {
   const host = request.headers.get('host') ?? ''
 
-  // stay.bmf.llc is fully public — no auth check
+  // stay.bmf.llc — proxy to /book-direct/* files, preserving clean URLs
   if (host.includes('stay.bmf.llc')) {
-    return
+    const { pathname } = new URL(request.url)
+    // Assets and already-mapped paths serve directly
+    if (pathname.startsWith('/book-direct/')) return
+    // Proxy root and clean paths → /book-direct/ equivalent (URL stays clean for user)
+    const mapped = pathname === '/' ? '/book-direct/index' : `/book-direct${pathname}`
+    return fetch(new URL(mapped, request.url))
   }
 
   const { pathname } = new URL(request.url)

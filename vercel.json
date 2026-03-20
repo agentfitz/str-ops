@@ -6,18 +6,8 @@
   "rewrites": [
     {
       "source": "/",
-      "has": [{ "type": "host", "value": "stay.bmf.llc" }],
-      "destination": "/book-direct/index.html"
-    },
-    {
-      "source": "/(.*)",
-      "has": [{ "type": "host", "value": "stay.bmf.llc" }],
-      "destination": "/book-direct/$1"
-    },
-    {
-      "source": "/",
       "has": [{ "type": "host", "value": "ops.bmf.llc" }],
-      "destination": "/index.html"
+      "destination": "/index"
     },
     {
       "source": "/owner-reports/(.*)",
