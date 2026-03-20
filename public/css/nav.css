@@ -1,14 +1,73 @@
-/* nav.css — top navigation */
+/* nav.css — utility bar + main navigation */
+
+:root {
+  --util-nav-height: 32px;
+}
+
+/* ── Utility bar ─────────────────────────────────────────────── */
+
+.util-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--util-nav-height);
+  background: #EDEAE4;
+  border-bottom: 1px solid var(--color-border);
+  z-index: 101;
+}
+
+.util-nav__inner {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 0 var(--space-6);
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-faint);
+}
+
+.util-nav__right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.util-nav__sep {
+  opacity: 0.5;
+}
+
+.util-nav__link {
+  color: var(--color-text-faint);
+  text-decoration: none;
+}
+
+.util-nav__link:hover {
+  color: var(--color-text-muted);
+  text-decoration: underline;
+}
+
+/* ── Main nav ────────────────────────────────────────────────── */
 
 .nav {
   position: fixed;
-  top: 0;
+  top: var(--util-nav-height);
   left: 0;
   right: 0;
   height: var(--nav-height);
   background: var(--color-bg);
   border-bottom: 1px solid var(--color-border);
   z-index: 100;
+}
+
+/* Push page content below both bars */
+.main {
+  padding-top: calc(var(--nav-height) + var(--util-nav-height) + var(--space-10)) !important;
 }
 
 .nav__inner {

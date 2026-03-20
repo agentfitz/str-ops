@@ -12,9 +12,24 @@
   <link rel="stylesheet" href="/css/table.css">
   <link rel="stylesheet" href="/css/form.css">
 
+  <script src="/js/util-nav.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
 <body x-data="reportsAdmin()" x-init="init()">
+
+  <!-- Utility bar -->
+  <div class="util-nav" x-data="utilNav()">
+    <div class="util-nav__inner">
+      <span>BMF Enterprises · Internal Use Only</span>
+      <span class="util-nav__right">
+        <a href="https://stay.bmf.llc" target="_blank" rel="noopener" class="util-nav__link">stay.bmf.llc ↗</a>
+        <span class="util-nav__sep">·</span>
+        <span x-text="email"></span>
+        <span class="util-nav__sep">·</span>
+        <a href="/api/auth/logout" class="util-nav__link">Logout</a>
+      </span>
+    </div>
+  </div>
 
   <nav class="nav">
     <div class="nav__inner">
