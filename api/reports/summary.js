@@ -68,6 +68,7 @@ export default async function handler(req, res) {
 
   return res.status(200).json({
     ...reportData,
+    owner:                { ...reportData.owner, email: ownerRow.email },
     report:               savedReport || null,
     featured_review:      featuredReview,
     manual_payout_amount: manualPayoutAmount,

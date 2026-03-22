@@ -78,6 +78,8 @@ Two data sources serve different purposes — never mix them for the same calcul
 - `reviews` table — manually seeded guest reviews per property; includes `guest_location` field (e.g. 'Elk Grove, CA', nullable)
 - `owner_reports.featured_review_id` (uuid) — randomly selected at generation time and permanently stamped on the report; re-rolled on every regeneration
 - `owner_reports.manual_payout_amount` (numeric 10,2) — optional payout override: null = use formula (default), 0 = suppress distribution, any amount = override in either direction
+- `owner_reports.emailed_at` (timestamptz) — stamped when report link is sent via Resend; null = never sent
+- `owner_reports.pdf_path` (text) — Supabase Storage path in `reports` bucket (e.g. `{uuid}.pdf`); null = not yet generated; cached on first generate
 
 Seed data (correct state):
 - Brian FitzGerald (`00000000-...0001`, slug `brian-fitzgerald`)
@@ -95,7 +97,8 @@ Seed data (correct state):
 - **Charts**: Chart.js 4.4.1
 - **Data import**: CSV importers in `scripts/importers/` for IGMS and Baselane exports (uses PapaParse)
 - **AI**: Claude API used for generating owner report summaries (`lib/services/aiSummary.js`)
-- **Email**: Resend — for owner report delivery notifications. Domain: bmf.llc. API key in `RESEND_API_KEY`. *(Setup in progress — DNS verification pending in Squarespace)*
+- **Email**: Resend — for owner report delivery notifications. Domain: bmf.llc. API key in `RESEND_API_KEY`. DNS verification pending in Squarespace.
+- **PDF**: `puppeteer-core` + `@sparticuz/chromium` — renders report page headlessly, uploads to Supabase Storage `reports/` bucket, serves via signed URL. `maxDuration: 60` set in vercel.json.
 
 ## Design System
 - **Fonts**: Playfair Display (headings/serif), DM Sans (body), IBM Plex Mono (numbers/data/labels)
@@ -137,6 +140,9 @@ api/                        # API route handlers (Vercel serverless pattern)
     generate.js             # POST /api/owner-reports/generate
     save.js                 # PUT /api/owner-reports/save
     publish.js              # POST /api/owner-reports/publish
+    send-email.js           # POST /api/owner-reports/send-email — send report link via Resend
+    history.js              # GET /api/owner-reports/history?owner=&property= — up to 6 published reports
+    pdf.js                  # GET /api/owner-reports/pdf?token=<uuid> — generate or serve cached PDF
   properties.js             # GET /api/properties
   owners.js                 # GET /api/owners?property= (optional filter)
   upload.js                 # POST /api/upload (CSV import)
@@ -361,8 +367,12 @@ Net Cash Flow = Gross Revenue + Management Fee + sum of all expense amounts (exp
 
 ### Planned but not yet implemented
 - Static token-based owner report URLs (`/owner-reports/[token]`)
-- Resend email notification on publish with test-send field
-- PDF generation (server-side Puppeteer preferred over browser print)
+- PDF generation caching invalidation (currently cached indefinitely; re-generate will produce stale PDF until manually cleared)
+
+### Implemented
+- Email delivery via Resend (`api/owner-reports/send-email.js`) — ✉ Send button on report viewer (published only), opens modal with pre-filled owner email and editable To field
+- Report history dropdown on viewer — shows up to 6 prior published months, navigates between them
+- PDF generation via Puppeteer + `@sparticuz/chromium` (`api/owner-reports/pdf.js`) — draft reports always regenerate; published reports cached in Supabase Storage `reports/` bucket
 
 ---
 

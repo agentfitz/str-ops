@@ -11,11 +11,58 @@
 
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
-<body x-data="reportViewer()" x-init="init()">
+<body x-data="reportViewer()" x-init="init()" @keydown.escape.window="if(showEmailModal) closeEmailModal()" x-effect="document.body.style.overflow = showEmailModal ? 'hidden' : ''">
 
   <!-- Draft banner -->
   <div class="report-draft-banner" x-show="report && report.status !== 'published'">
-    DRAFT — Not yet published
+    <span>Draft — Not yet published</span>
+    <button
+      class="report-draft-banner__publish"
+      @click="publishReport()"
+      :disabled="publishing"
+      x-text="publishing ? 'Publishing...' : 'Publish Report'"
+    ></button>
+    <span x-show="publishError" style="text-transform: none; letter-spacing: 0; color: var(--color-negative);" x-text="publishError"></span>
+  </div>
+
+  <!-- Report controls: history dropdown + PDF -->
+  <div class="report-controls" x-show="!loading && !error && report" x-cloak>
+    <div class="report-controls__inner">
+      <select
+        class="report-history-select"
+        x-show="reportHistory.length > 1"
+        x-model="selectedHistoryId"
+        @change="navigateHistory()"
+      >
+        <template x-for="h in reportHistory" :key="h.id">
+          <option :value="h.id" x-text="h.label"></option>
+        </template>
+      </select>
+      <a
+        :href="'/api/owner-reports/pdf?token=' + (report?.id || '')"
+        class="report-btn-pdf"
+        target="_blank"
+        x-show="report?.id"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        PDF
+      </a>
+      <button
+        class="report-btn-send"
+        x-show="report?.id"
+        @click="openEmailModal()"
+      >
+        <template x-if="!emailSent">
+          <span style="display:flex;align-items:center;gap:5px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+            Send
+          </span>
+        </template>
+        <template x-if="emailSent">
+          <span>✓ Sent</span>
+        </template>
+      </button>
+    </div>
   </div>
 
   <!-- Loading state -->
@@ -406,6 +453,46 @@
     </div><!-- /report-container--sections -->
   </div><!-- /report content -->
 
+  <!-- Email modal -->
+  <div
+    x-show="showEmailModal"
+    x-cloak
+    class="report-modal-backdrop"
+    @click.self="closeEmailModal()"
+  >
+    <div class="report-modal">
+      <h4 class="report-modal__title">Send Report</h4>
+      <div class="report-modal__divider"></div>
+      <p class="report-modal__body">
+        Your <strong x-text="data?.property?.display_name"></strong> report for
+        <span x-text="formatMonthYear(data?.month, data?.year)"></span> will be
+        emailed with the executive summary and a link to view the full report.
+      </p>
+      <div class="report-modal__field">
+        <label class="report-modal__label">To</label>
+        <input type="email" class="report-modal__input" x-model="emailTo" @keyup.enter="sendEmail()">
+        <p class="report-modal__owner-email">
+          Owner: <span x-text="data?.owner?.email || 'No email on file'" style="user-select: all; cursor: text;"></span>
+        </p>
+      </div>
+      <div x-show="emailError" class="report-modal__error" x-text="emailError"></div>
+      <div class="report-modal__actions">
+        <button class="report-modal__cancel" @click="closeEmailModal()">Cancel</button>
+        <button class="report-modal__send" @click="sendEmail()" :disabled="emailSending || !emailTo">
+          <template x-if="!emailSending">
+            <span style="display:flex;align-items:center;gap:6px;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+              <span x-text="emailTo && emailTo === data?.owner?.email ? 'Deliver Owner Report →' : 'Send Report Preview →'"></span>
+            </span>
+          </template>
+          <template x-if="emailSending">
+            <span>Sending...</span>
+          </template>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script>
     const MONTH_NAMES = ['', 'January', 'February', 'March', 'April', 'May', 'June',
       'July', 'August', 'September', 'October', 'November', 'December']
@@ -430,14 +517,25 @@
 
     function reportViewer() {
       return {
-        loading:         true,
-        error:           '',
-        data:            null,
-        report:          null,
-        featured_review: null,
-        calendarCells:   [],
+        loading:           true,
+        error:             '',
+        data:              null,
+        report:            null,
+        featured_review:   null,
+        calendarCells:     [],
+        reportHistory:     [],
+        selectedHistoryId: null,
+        publishing:        false,
+        publishError:      '',
+        showEmailModal:    false,
+        emailTo:           '',
+        emailSending:      false,
+        emailSent:         false,
+        emailError:        '',
+        currentUserEmail:  '',
 
         async init() {
+          fetch('/api/me').then(r => r.json()).then(d => { this.currentUserEmail = d.email || '' }).catch(() => {})
           const params = parseReportParams()
           if (!params.month || !params.year || !params.ownerSlug || !params.propertySlug) {
             this.error   = 'Invalid report URL.'
@@ -461,10 +559,95 @@
             if (json.property && json.owner) {
               document.title = `${json.property.display_name} — ${MONTH_NAMES[json.month]} ${json.year} — Owner Report`
             }
+
+            // Load history for dropdown (published reports only)
+            try {
+              const histRes  = await fetch(`/api/owner-reports/history?owner=${params.ownerSlug}&property=${params.propertySlug}`)
+              const histData = await histRes.json()
+              this.reportHistory     = (histData || []).map(r => ({
+                ...r,
+                label: r.status === 'published'
+                  ? `${MONTH_NAMES[r.month]} ${r.year}`
+                  : `${MONTH_NAMES[r.month]} ${r.year} (draft)`,
+              }))
+              this.selectedHistoryId = json.report?.id || null
+            } catch (_) {
+              // non-fatal — history dropdown just won't show
+            }
           } catch (err) {
             this.error = err.message
           } finally {
             this.loading = false
+          }
+        },
+
+        openEmailModal() {
+          this.emailTo    = this.currentUserEmail || this.data?.owner?.email || ''
+          this.emailError = ''
+          this.showEmailModal = true
+        },
+
+        closeEmailModal() {
+          this.showEmailModal = false
+          this.emailError     = ''
+        },
+
+        async sendEmail() {
+          if (!this.emailTo || !this.report?.id) return
+          this.emailSending = true
+          this.emailError   = ''
+          try {
+            const res = await fetch('/api/owner-reports/send-email', {
+              method:  'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body:    JSON.stringify({ id: this.report.id, to_email: this.emailTo }),
+            })
+            if (!res.ok) {
+              const err = await res.json()
+              throw new Error(err.error || 'Send failed')
+            }
+            this.showEmailModal = false
+            this.emailSent      = true
+            setTimeout(() => { this.emailSent = false }, 2000)
+          } catch (err) {
+            this.emailError = err.message
+          } finally {
+            this.emailSending = false
+          }
+        },
+
+        async publishReport() {
+          if (!this.report?.id) return
+          this.publishing   = true
+          this.publishError = ''
+          try {
+            const res = await fetch('/api/owner-reports/publish', {
+              method:  'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body:    JSON.stringify({ id: this.report.id }),
+            })
+            if (!res.ok) {
+              const err = await res.json()
+              throw new Error(err.error || 'Publish failed')
+            }
+            this.report = { ...this.report, status: 'published' }
+          } catch (err) {
+            this.publishError = err.message
+          } finally {
+            this.publishing = false
+          }
+        },
+
+        navigateHistory() {
+          const selected = this.reportHistory.find(h => h.id === this.selectedHistoryId)
+          if (!selected) return
+          const params = parseReportParams()
+          const mm     = String(selected.month).padStart(2, '0')
+          const parts  = window.location.pathname.split('/').filter(Boolean)
+          if (parts[0] === 'owner-reports') {
+            window.location.href = `/owner-reports/${mm}-${selected.year}/${params.ownerSlug}/${params.propertySlug}`
+          } else {
+            window.location.href = `${window.location.pathname}?property=${params.propertySlug}&owner=${params.ownerSlug}&month=${selected.month}&year=${selected.year}`
           }
         },
 

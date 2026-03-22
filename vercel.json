@@ -1,7 +1,8 @@
 {
   "cleanUrls": true,
   "functions": {
-    "api/upload.js": { "maxDuration": 300 }
+    "api/upload.js":            { "maxDuration": 300 },
+    "api/owner-reports/pdf.js": { "maxDuration": 60 }
   },
   "redirects": [
     {

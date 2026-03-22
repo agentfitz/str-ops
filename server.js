@@ -22,13 +22,6 @@ const app = express()
 app.use(express.json())
 app.use(express.urlencoded({ extended: false }))
 
-// ── Auth routes (public — handlers include their own cookie-session + passport) ──
-app.all('/api/auth/*path', async (req, res) => {
-  const handler = await getApiHandler(req.path)
-  if (handler) return await handler(req, res)
-  res.status(404).json({ error: 'Not found' })
-})
-
 // ── Login page (public) ───────────────────────────────────────
 app.get('/login', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'login.html'))
@@ -42,11 +35,18 @@ app.get('/owner-reports/*path', (_req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'views', 'owner-report.html'))
 })
 
-// ── Auth wall — everything below requires a valid JWT cookie ──
-app.use(requireAuth)
+// ── All API routes — public paths bypass auth, protected paths require JWT ──
+// Mirrors Vercel middleware PUBLIC_PATHS list
+const PUBLIC_API_PREFIXES = ['/api/auth/', '/api/reports/', '/api/webhooks/', '/api/me']
 
-// ── API routes (dynamic, cache-busted) ───────────────────────
 app.all('/api/*path', async (req, res) => {
+  const isPublic = PUBLIC_API_PREFIXES.some(p => req.path.startsWith(p))
+  if (!isPublic) {
+    const token = getCookie(req.headers.cookie, 'bmf-auth')
+    const user  = token ? await verifyToken(token) : null
+    if (!user) return res.status(401).json({ error: 'Unauthorized' })
+    req.user = user
+  }
   const handler = await getApiHandler(req.path)
   if (!handler) return res.status(404).json({ error: `No handler for ${req.path}` })
   try {
@@ -56,6 +56,12 @@ app.all('/api/*path', async (req, res) => {
     res.status(500).json({ error: err.message })
   }
 })
+
+// ── Public static files (CSS, JS, images) — before auth wall ─
+app.use(express.static(path.join(__dirname, 'public')))
+
+// ── Auth wall — protected HTML pages below this line ─────────
+app.use(requireAuth)
 
 // ── Protected HTML pages — served from views/ with email injection ────────
 app.use(async (req, res, next) => {
@@ -74,12 +80,6 @@ app.use(async (req, res, next) => {
   return res.send(html)
 })
 
-// ── Other static files (CSS, JS, images) ─────────────────────
-app.use((req, res, next) => {
-  const filePath = path.join(__dirname, 'public', req.path)
-  if (fs.existsSync(filePath)) return res.sendFile(filePath)
-  next()
-})
 
 app.use((req, res) => res.status(404).send('Not found'))
 

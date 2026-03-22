@@ -122,6 +122,8 @@ create table owner_reports (
   manual_payout_amount  numeric(10,2),            -- on_demand: amount distributed this month (null = no distribution)
   generated_at          timestamptz,
   published_at          timestamptz,
+  emailed_at            timestamptz,
+  pdf_path              text,
   created_at            timestamptz default now(),
   unique(property_id, owner_id, month, year),
   featured_review_id    uuid references reviews(id)
